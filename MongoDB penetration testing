@@ -1,0 +1,614 @@
+*** MongoDB PENETRATION TESTING ***
+
+
+==========================================================================================================
+INDEX
+==========================================================================================================
+01. General information
+02. How to perform a network TCP ports scan to locate a MongoDB database
+03. How to perform a password brute-force attack to identify valid database credentials (logins/passwords)
+04. How to log into a MongoDB database using valid credentials and extract its configuration
+05. How to audit/test the security posture of a MongoDB (tools: mongoaudit, nosqlmap)
+
+
+==========================================================================================================
+01. General information
+==========================================================================================================
+
+• MongoDB concepts
+  + A database holds a set of collections
+  + A collection holds a set of documents
+  + A document is a set of fields
+  + A field is a key-value pair
+  + A key is a name (string)
+  + A value is a - basic type like string, integer, float, timestamp, binary, etc.,
+  + a document, or
+  + an array of values
+
+• It's a "document-orientated" database (otherwise known as a NoSQL database).
+• Typically, NoSQL DB's use XML, YAML, JSON, and BSON to encode the data. MongoDB uses Binary JSON (BSON).
+• NoSQL databases have their own terminology that is different from typical relational databases such as MSSQL and MySQL:
+  + Document = Row or Record
+  + Collection = Table or View
+  + Field = Column
+
+• So, a typical NoSQL database collection (table) holds one or more "documents" (records). 
+• Each document can have one or more fields (columns).
+• It's being used more and more in the production of agile applications i.e. quick to develop and deploy and often used in "big data" type projects.
+• These can include banking applications and document storage as examples.
+
+The core components in the MongoDB package are:
+----------------------------------------------
+• mongod
+  + the core database process (it is the "Mongo Daemon" = the host process for the database.)
+• mongos
+  + the controller and query router for sharded clusters
+  + mongos for "MongoDB Shard," is a routing service for MongoDB shard configurations that processes queries from the application layer,
+    and determines the location of this data in the sharded cluster, in order to complete these operations.
+  + From the perspective of the application, a mongos instance behaves identically to any other MongoDB instance.
+• mongo 
+  + it is the interactive MongoDB Shell. 
+
+
+Configuration file
+------------------
+• You can configure mongod and mongos instances at startup using a configuration file
+  + mongod --config /etc/mongod.conf
+  + mongos --config /etc/mongos.conf
+  + mongod -f /etc/mongod.conf
+  + mongos -f /etc/mongos.conf
+
+
+Example of configuration file "/etc/mongod.conf"
+------------------------------------------------
+	systemLog:
+	   verbosity: <int>
+	   quiet: <boolean>
+	   traceAllExceptions: <boolean>
+	   syslogFacility: <string>
+	   path: <string>
+	   logAppend: <boolean>
+	   logRotate: <string>
+	   destination: <string>
+	   timeStampFormat: <string>
+	   component:
+	      accessControl:
+		 verbosity: <int>
+	      command:
+		 verbosity: <int>
+	      # COMMENT some component verbosity settings omitted for brevity
+	      storage:
+		 verbosity: <int>
+		 journal:
+		    verbosity: <int>
+	      write:
+		 verbosity: <int>	
+
+	auditLog:
+	   destination: <string>
+	   format: <string>
+	   path: <string>
+	   filter: <string>		 
+
+	processManagement:
+	   fork: <boolean>
+	   pidFilePath: <string>
+
+	net:
+	   port: <int>
+	   bindIp: <string>
+	   maxIncomingConnections: <int>
+	   wireObjectCheck: <boolean>
+	   ipv6: <boolean>
+
+	   unixDomainSocket:
+	      enabled: <boolean>
+	      pathPrefix: <string>
+	      filePermissions: <int>
+
+	   http:
+	      enabled: <boolean>
+	      JSONPEnabled: <boolean>
+	      RESTInterfaceEnabled: <boolean>
+
+	   ssl:
+	      sslOnNormalPorts: <boolean>  # deprecated since 2.6
+	      mode: <string>
+	      PEMKeyFile: <string>
+	      PEMKeyPassword: <string>
+	      clusterFile: <string>
+	      clusterPassword: <string>
+	      CAFile: <string>
+	      CRLFile: <string>
+	      allowConnectionsWithoutCertificates: <boolean>
+	      allowInvalidCertificates: <boolean>
+	      allowInvalidHostnames: <boolean>
+	      disabledProtocols: <string>
+	      FIPSMode: <boolean>   
+
+	security:
+	   keyFile: <string>
+	   clusterAuthMode: <string>
+	   authorization: <string>
+	   javascriptEnabled:  <boolean>
+	   sasl:
+	      hostName: <string>
+	      serviceName: <string>
+	      saslauthdSocketPath: <string>
+
+	setParameter:
+	   <parameter1>: <value1>
+	   <parameter2>: <value2>
+	   enableLocalhostAuthBypass: false   
+
+	storage:
+	   dbPath: <string>
+	   indexBuildRetry: <boolean>
+	   repairPath: <string>
+	   journal:
+	      enabled: <boolean>
+	   directoryPerDB: <boolean>
+	   syncPeriodSecs: <int>
+	   engine: <string>
+	   mmapv1:
+	      preallocDataFiles: <boolean>
+	      nsSize: <int>
+	      quota:
+		 enforced: <boolean>
+		 maxFilesPerDB: <int>
+	      smallFiles: <boolean>
+	      journal:
+		 debugFlags: <int>
+		 commitIntervalMs: <num>
+	   wiredTiger:
+	      engineConfig:
+		 cacheSizeGB: <number>
+		 journalCompressor: <string>
+		 directoryForIndexes: <boolean>
+	      collectionConfig:
+		 blockCompressor: <string>
+	      indexConfig:
+		 prefixCompression: <boolean>   
+
+	operationProfiling:
+	   slowOpThresholdMs: <int>
+	   mode: <string>
+
+	replication:
+	   oplogSizeMB: <int>
+	   replSetName: <string>
+	   secondaryIndexPrefetch: <string>
+
+	sharding:
+	   clusterRole: <string>
+	   archiveMovedChunks: <boolean>   
+
+	snmp:
+	   subagent: <boolean>
+	   master: <boolean>	 	
+
+	Authentification
+	-----------------
+	mongod --setParameter authenticationMechanisms=XXX
+
+
+MongoDB authentication
+------------------------
+> SCRAM-SHA-1 : RFC 5802 standard Salted Challenge Response Authentication Mechanism using the SHA-1 hash function.
+> MONGODB-CR : MongoDB challenge/response authentication.
+> MONGODB-X509 : MongoDB TLS/SSL certificate authentication.
+> GSSAPI (Kerberos) : External authentication using Kerberos. This mechanism is available only in MongoDB Enterprise.
+> PLAIN (LDAP SASL) : External authentication using LDAP. PLAIN transmits passwords in plain text. This mechanism is available only in MongoDB Enterprise
+
+
+==========================================================================================================
+02. How to perform a network ports scan to locate a MongoDB Database
+==========================================================================================================
+
+1. NMAP (https://nmap.org)
+--------------------------
+  pentester@KaliLinux> nmap -sV -sS -vv 192.168.1.234 -p 28017,27017,27018,27018
+
+    27017 - This is the default port mongod and mongos (mongo shell) instances. You can change this port with port or --port.
+    27018 - This is the default port when running with --shardsvr runtime operation or shardsvr setting.
+    27019 - This is the default port when running with --configsvr runtime operation or configsvr setting.
+    28017 - This is the default port for the web status page. This is always accessible at a port that is 1000 greater than the port determined by port.
+
+
+  pentester@KaliLinux> nmap -Pn -p 27017 --script mongodb-databases x.x.x.x
+  pentester@KaliLinux> nmap -p 27017 --script mongodb-databases 192.168.1.104
+  
+	Starting Nmap 7.70 ( https://nmap.org ) at 2019-03-02 01:44 CET
+	Nmap scan report for 192.168.1.104
+	Host is up (0.00048s latency).
+
+	PORT      STATE SERVICE
+	27017/tcp open  mongodb
+	| mongodb-databases: 
+	|   databases
+	|     0
+	|       empty = false
+	|       name = credentials
+	|       sizeOnDisk = 83886080.0
+	|     1
+	|       empty = false
+	|       name = local
+	|       sizeOnDisk = 83886080.0
+	|   totalSize = 167772160.0
+	|_  ok = 1.0
+	MAC Address: 08:00:27:34:BF:F6 (Oracle VirtualBox virtual NIC)
+
+	Nmap done: 1 IP address (1 host up) scanned in 0.60 seconds
+
+
+==========================================================================================================
+03. How to perform a password brute-force attack to identify valid database credentials (logins/passwords)
+==========================================================================================================
+
+1. NMAP - 'mongodb-brute' module (https://nmap.org)
+-----------------------------------------------------
+• This NSE script performs brute force password auditing against the MongoDB database.
+  
+  pentester@KaliLinux> nmap -p 27017 --script mongodb-brute <paddles>
+
+
+2. METASPLOIT - MongoDB Login Utility (Brute Force)
+---------------------------------------------------------------
+• This module attempts to brute force authentication credentials for MongoDB. Note that, by default, MongoDB does not require authentication.
+• https://www.rapid7.com/db/modules/auxiliary/scanner/mongodb/mongodb_login
+• auxiliary/scanner/mongodb/mongodb_login
+
+
+==========================================================================================================
+04. How to log into a MongoDB database using valid credentials and extract its configuration
+==========================================================================================================
+
+• Install mongo client on Kali
+-------------------------------
+  pentester@KaliLinux> apt-get install mongodb-clients
+
+
+• Connect to a MongoDB using the 'mongo' command line client
+--------------------------------------------------------------
+  > mongo --port <port> -u <username> -p <password> <IP> 	--note:  Port 27017 is default value
+  > mongo --port 27017 -u foo -p bar 10.10.10.10
+  > mongo --port 27017 -u myUserAdmin -p abc123 --authenticationDatabase admin 10.10.10.10
+
+• Connect to a MongoDB using the HTTP Web concole interface (TCP/28017)
+------------------------------------------------------------------------
+  > http://<ipaddress>:28017
+    
+	> http://192.168.1.2:28017/hostInfo?text=1
+	> http://192.168.1.2:28017/serverStatus?text=1
+	> http://192.168.1.2:28017/listDatabases?text=1
+	> http://192.168.1.2:28017/top?text=1
+	> http://192.168.1.2:28017/replSetGetStatus?text=1
+	> http://192.168.1.2:28017/buildInfo?text=1
+
+	> http://192.168.1.2:28017/<database>/CollectionName>/
+	> http://192.168.1.2:28017/HR-database/employees/
+	> http://192.168.1.2:28017/admin/user/
+	> http://192.168.1.234:28017/admin/system.users/
+	> http://192.168.1.234:28017/admin/system.version/
+	> http://192.168.1.2:28017/admin/$cmd/?filter_listDatabases=1&limit=1
+	
+	
+• Useful commands
+-----------------
+> mongo@mongo:~$ sudo service mongod start mongod start/running, process 2210		-- start a MongoDB instance
+
+> mongo@mongo:~$ sudo mongod -httpinterface -rest -smallfiles
+
+> use admin								-- access the admin database (from the localhost interface)
+> db.adminCommand( { "hostInfo" : 1 } )					-- Show server info
+> db.version()								-- Show MongoDB version
+> show users								-- Show users
+> db.getUser()								-- Returns information for all the users in the database
+> db.users.find()							-- Show users
+> db.runCommand( {buildInfo: 1} )
+> show roles								-- Show roles
+> SHOW ROLES IN mydatabase
+> SHOW ROLES FOR ROLE myrole
+> use <db_name>
+> show dbs 								-- Show databases
+> show tables								-- Show tables (called collections)
+> show collections							-- Show tables (called collections)
+> db.getCollctionNames()						-- Show tables (called collections)
+> db.<table_name>.find()						-- List data in the table/collection
+> db.<collection_name>.find( { <column_name> : "<value>" } 		-- Search for exact match in the table/collection
+> db.<collection_name>.find( { <column_name> : /<value>/i } )		-- Wildcard search data in the table/collection
+> db.users.find( { name : /tony/i } )					-- Wildcard search user tony in the table/collection users
+> Mongodump -u <user> -p <pass> -h <IP> --db <db_name>			-- Dump the DB for off-line grepping
+> Mongodump -u foo -p bar -h 10.10.10.10 --db SecretDB
+> db.system.profile.find()						-- Logs
+> db.getProfilingLevel()   						--To see what profiling level the database is running in, use
+> db.getProfilingStatus()  						-- and to see the status
+> use reporting
+> db.getUser("reportsUser")
+> use accounts
+> db.getRole( "readWrite", { showPrivileges: true } )
+> logout
+
+> db.auth("superAdmin","superAdmin123")   				-- login as the user 'superadmin'
+> db.runCommand({connectionStatus : 1})   				-- show authenticated users
+
+> db.runCommand( { usersInfo: 1 , showCredentials : true } ); 
+> db.runCommand{ usersInfo: { user: <name>, db: <db> }, showCredentials: <Boolean>, showPrivileges: <Boolean> }
+
+> db.runCommand( { rolesInfo: 1, showBuiltinRoles: true } )	  	-- Return Information for All Roles in the Database
+> db.system.users.findOne({user: "testUser"})				-- How to display user's roles and password hash
+	{
+	    "_id" : "admin.testUser",
+	    "user" : "testUser",
+	    "db" : "testdb",
+	    "credentials" : {
+		"SCRAM-SHA-1" : {
+		    "iterationCount" : 10000,
+		    "salt" : "+seF99VS0sZFe30VPBHA7A==",
+		    "storedKey" : "DYPbk/QJVowCNDPe2O2uWMmGq8U=",
+		    "serverKey" : "q4KAi4pVZNOLCgWcxcBr7jkM3m8="
+		}
+	    },
+	    "roles" : [
+		{
+		    "role" : "readWrite",
+		    "db" : "testDb"
+
+> use reporting
+> db.getUser("reportsUser")			-- Returns information for all the users in the database.
+	 ..
+	"roles" : [
+	 { "role" : "readWrite", "db" : "accounts" },
+	 { "role" : "read", "db" : "reporting" },
+	 { "role" : "read", "db" : "products" },
+		   { "role" : "read", "db" : "sales" }
+	 ]
+
+
+• NMAP - 'mongodb-info' module
+-----------------------------------
+  This NSE script attempts to get a list of tables from a MongoDB database. 
+  This works only if MongoDB interface doesn’t require authentication.
+  
+  pentester@KaliLinux> nmap -p 27017 --script mongodb-info 192.168.1.104
+  
+	Starting Nmap 7.70 ( https://nmap.org ) at 2019-03-02 01:48 CET
+	Nmap scan report for 192.168.1.104
+	Host is up (0.00053s latency).
+
+	PORT      STATE SERVICE
+	27017/tcp open  mongodb
+	| mongodb-info: 
+	|   MongoDB Build info
+	|     OpenSSLVersion = OpenSSL 1.0.1f 6 Jan 2014
+	|     gitVersion = b8ff507269c382bc100fc52f75f48d54cd42ec3b
+	|     debug = false
+	|     sysInfo = Linux ip-10-71-195-23 3.13.0-24-generic #46-Ubuntu SMP Thu Apr 10 19:11:08 UTC 2014 x86_64 BOOST_LIB_VERSION=1_49
+	|     bits = 64
+	|     javascriptEngine = V8
+	|     versionArray
+	|       2 = 15
+	|       1 = 0
+	|       0 = 3
+	|       3 = 0
+	|     maxBsonObjectSize = 16777216
+	|     loaderFlags = 
+	|     ok = 1.0
+	|     version = 3.0.15
+	|     allocator = tcmalloc
+	|     compilerFlags = -Wnon-virtual-dtor -Woverloaded-virtual -std=c++11 -fno-omit-frame-pointer -fPIC -fno-strict-aliasing -ggdb -pthread -Wall -Wsign-compare -Wno-unknown-pragmas -Winvalid-pch -pipe -Werror -O3 -Wno-unused-local-typedefs -Wno-unused-function -Wno-deprecated-declarations -Wno-unused-but-set-variable -Wno-missing-braces -fno-builtin-memcmp -std=c99
+	|   Server status
+	|     mem
+	|       supported = true
+	|       mappedWithJournal = 320
+	|       virtual = 530
+	|       mapped = 160
+	|       resident = 72
+	|       bits = 64
+	|     dur
+	|       journaledMB = 0.0
+	|       timeMs
+	|         remapPrivateView = 0
+	|         writeToJournal = 0
+	|         dt = 3005
+	|         prepLogBuffer = 0
+	|         commits = 0
+	|         writeToDataFiles = 0
+	|         commitsInWriteLock = 0
+	|       writeToDataFilesMB = 0.0
+	|       earlyCommits = 0
+	|       commits = 29
+	|       compression = 0.0
+	|       commitsInWriteLock = 0
+	|     backgroundFlushing
+	|       flushes = 63
+	|       last_ms = 1
+	|       average_ms = 0.063492063492063
+	|       last_finished = 1583110110879
+	|       total_ms = 4
+	|     cursors
+	<SNIP>
+
+
+==========================================================================================================
+05. How to audit/test the security posture of a MongoDB (tools: mongoaudit, nosqlmap)
+==========================================================================================================
+
+1. Security Checklist
+-----------------------
+• Enable Access Control and Enforce Authentication
+• Configure Role-Based Access Control
+• Encrypt Communication
+• Encrypt and Protect Data
+• Limit Network Exposure
+    Ensure that the HTTP status interface, the REST API, and the JSON API are all disabled in production environments
+    to prevent potential data exposure and vulnerability to attackers.7
+    HTTP Status Interface
+    REST API
+    bind_ip
+• Audit System Activity
+	/var/log/mongodb/mongodb.log
+• Run MongoDB with a Dedicated User
+• Run MongoDB with Secure Configuration Options
+• Request a Security Technical Implementation Guide (where applicable)
+• Consider Security Standards Compliance
+
+Note: The configuration file "/etc/mongod.conf" must be reviewed.
+
+
+2. Tool "Mongoaudit" (https://github.com/stampery/mongoaudit)
+-----------------------------------------------------------
+
+• Mongoaudit is a CLI tool for auditing MongoDB servers, detecting poor security settings and performing automated penetration testing.
+
+• installer: curl -s https://mongoaud.it/install | bash
+
+• Supported tests:
+  + MongoDB listens on a port different to default one
+  + Server only accepts connections from whitelisted hosts / networks
+  + MongoDB HTTP status interface is not accessible on port 28017
+  + MongoDB is not exposing its version number
+  + MongoDB version is newer than 2.4
+  + TLS/SSL encryption is enabled
+  + Authentication is enabled
+  + SCRAM-SHA-1 authentication method is enabled
+  + Server-side Javascript is forbidden *
+  + Roles granted to the user only permit CRUD operations *
+  + The user has permissions over a single database *
+  + Security bug CVE-2015-7882
+  + Security bug CVE-2015-2705
+  + Security bug CVE-2014-8964
+  + Security bug CVE-2015-1609
+  + Security bug CVE-2014-3971
+  + Security bug CVE-2014-2917
+  + Security bug CVE-2013-4650
+  + Security bug CVE-2013-3969
+  + Security bug CVE-2012-6619
+  + Security bug CVE-2013-1892
+  + Security bug CVE-2013-2132
+
+
+3. Tool "NoSQLMAP" (https://github.com/stampery/mongoaudit)
+-----------------------------------------------------------
+
+• NoSQLMap is an open source Python tool designed to audit for as well as automate injection attacks and exploit default
+  configuration weaknesses in NoSQL databases and web applications using NoSQL in order to disclose or clone data from the
+  database.
+  
+	 _  _     ___  ___  _    __  __  
+	| \| |___/ __|/ _ \| |  |  \/  |__ _ _ __ 
+	| .` / _ \__ \ (_) | |__| |\/| / _` | '_ \
+	|_|\_\___/___/\__\_\____|_|  |_\__,_| .__/
+	 v0.7 codingo@protonmail.com        |_|   
+
+	1-Set options
+	2-NoSQL DB Access Attacks
+	3-NoSQL Web App attacks
+	4-Scan for Anonymous MongoDB Access
+	5-Change Platform (Current: MongoDB)
+	x-Exit
+	Select an option: 4
+
+	MongoDB Default Access Scanner
+	==============================
+	1-Scan a subnet for default MongoDB access
+	2-Loads IPs to scan from a file
+	3-Enable/disable host pings before attempting connection
+	x-Return to main menu
+	
+	Select an option: 1
+	
+		Enter subnet to scan: 192.168.1.0/24
+		Couldn't connect to 192.168.1.1.
+		Couldn't connect to 192.168.1.2.
+		<SNIP>
+		Successful default access on 192.168.1.104(MongoDB Version: 3.0.15).
+		<SNIP>
+
+	 _  _     ___  ___  _    __  __           
+	| \| |___/ __|/ _ \| |  |  \/  |__ _ _ __ 
+	| .` / _ \__ \ (_) | |__| |\/| / _` | '_ \
+	|_|\_\___/___/\__\_\____|_|  |_\__,_| .__/
+	 v0.7 codingo@protonmail.com        |_|   
+	 
+	1-Set options
+	2-NoSQL DB Access Attacks
+	3-NoSQL Web App attacks
+	4-Scan for Anonymous MongoDB Access
+	5-Change Platform (Current: MongoDB)
+	x-Exit
+	
+	Select an option: 2
+	
+		DB Access attacks (MongoDB)
+		=================
+		Checking to see if credentials are needed...
+		Successful access with no credentials!
+		MongoDB web management closed or requires authentication.
+
+		1-Get Server Version and Platform
+		2-Enumerate Databases/Collections/Users
+		3-Check for GridFS
+		4-Clone a Database
+		5-Launch Metasploit Exploit for Mongo < 2.2.4
+		6-Return to Main Menu
+	
+	Select an attack: 1
+
+		Server Info:
+		MongoDB Version: 3.0.15
+		Debugs enabled : False
+		Platform: 64 bit
+
+	Select an attack: 2
+
+		List of databases:
+		credentials
+		local
+
+		List of collections:
+		credentials:
+		system.indexes
+		typhoon
+		creds
+
+		local:
+		system.indexes
+		startup_log
+
+	Select an attack: 3
+
+		GridFS enabled on database credentials
+		 list of files:
+
+		GridFS enabled on database local
+		 list of files:
+
+	Select an attack: 4
+
+		1-credentials
+		2-local
+		Select a database to steal: 2
+		Does this database require credentials (y/n)? n
+
+
+OTHER / NOTES
+===============
+
+• Given the lack of security with mongodb with the default install, basic security hardening best practices should include:
+---------------------------------------------------------------------------------------------------------------------------
+  + Disabling the default status page – using the 'nohttpinterface' option to turn off the 28017 port.
+  + Use a different port – using the 'port' option
+  + Do not enable REST in production environments – don't use 'rest' option
+  + Bind the mongodb process to only one interface/IP – using the 'bind_ip'
+  + Don't run mongodb daemon as root
+  + Disable anonymous access – using the 'auth' option
+  + Encrypt data - "To support audit requirements, you may need to encrypt data stored in MongoDB. For best results you can encrypt this data in the application layer, by encrypting the content of fields that hold secure data."
+  + Encrypt communication – Recommended to use SSL  
+  
+
+METASPLOIT - MongoDB NoSQL Collection Enumeration Viamau Injection
+---------------------------------------------------------------
+• This module can exploit NoSQL injections on MongoDB versions less than 2.4 and enumerate the collections available in the data via boolean injections.
+• https://www.rapid7.com/db/modules/auxiliary/gather/mongodb_js_inject_collection_enum
+• auxiliary/gather/mongodb_js_inject_collection_enum

