@@ -23,7 +23,7 @@ You can substitute the keyword SCHEMA instead of DATABASE in MySQL SQL syntax, f
 Some other database products draw a distinction e.g. in the Oracle Database product, a schema represents only a part of a database: the tables and other objects owned by a single user.
 
 • TABLES
-Tables are the basic unit of data storage in an Oracle Database. Data is stored in rows and columns. 
+Tables are the basic unit of data storage in an MySQL Database. Data is stored in rows and columns. 
 
 • VIEWS
 Views are virtual tables formed by a query. A view is a dictionary object that you can use until you drop it. Views are not updatable.
@@ -806,11 +806,11 @@ Example of queries to create proxy users
 
 * Manual attack (to exploit an anonymous proxy user):
 ----------------------------------------------------- 
-    
+To ADD    
 
 
 
-07.6. DB Privesc - MySQL authentication capture
+07.7. DB Privesc - MySQL authentication capture
 ===================================================================
 
 
