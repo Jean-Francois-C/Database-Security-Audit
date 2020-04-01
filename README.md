@@ -12,5 +12,13 @@ Training course materials and reasearch notes that I created to teach how to per
 ➤ How to log into a MSSQL/Oracle/MySQL/MongoDB/PostgreSQL database using valid credentials  
 ➤ How to identify and exploit database and OS privileges escalation vulnerabilities (including configuration review)
 ➤ How to dump and crack database password hashes
-   
-Useful tools: nmap port scanner and (NSE) scripts, sql*plus, sqlcmd, mysql, mongo, psql, DBvis, ODAT (Oracle Database Attacking Tool), PowerUPsql (PowerShell Toolkit for Attacking SQL Server), Metasploit framework, various scripts (source:kali/Github/your owns),..
+```
+### Useful tools
+```
+➤ NMAP network port scanner and (NSE) scripts (https://nmap.org)
+➤ Database clients (e.g. sql*plus, sqlcmd, mysql, mongo, psql, DBvis (https://dbvis.com), Toad (https://www.quest.com/toad/))
+➤ ODAT - Oracle Database Attacking Tool (https://github.com/quentinhardy/odat) 
+➤ PowerUPsql - PowerShell Toolkit for Attacking SQL Server (https://github.com/NetSPI/PowerUpSQL) 
+➤ Metasploit framework (https://www.metasploit.com) 
+➤ Various scripts (source:kali/Github/your owns)
+...
