@@ -20,5 +20,6 @@ Training course materials and reasearch notes that I created to teach how to per
 ➤ ODAT - Oracle Database Attacking Tool (https://github.com/quentinhardy/odat) 
 ➤ PowerUPsql - PowerShell Toolkit for Attacking SQL Server (https://github.com/NetSPI/PowerUpSQL) 
 ➤ Metasploit framework (https://www.metasploit.com) 
+➤ 'John the Ripper' - Password cracker (https://www.openwall.com/john/)
 ➤ Various scripts (source:kali/Github/your owns)
 ...
