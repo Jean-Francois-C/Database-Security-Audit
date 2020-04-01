@@ -22,4 +22,3 @@ Training course materials and reasearch notes that I created to teach how to per
 ➤ Metasploit penetration testing framework (https://www.metasploit.com) 
 ➤ 'John the Ripper' - Password cracker (https://www.openwall.com/john/)
 ➤ Various scripts (source:kali/Github/your owns)
-...
