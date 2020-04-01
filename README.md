@@ -15,11 +15,11 @@ Training course materials and reasearch notes that I created to teach how to per
 ```
 ### Useful tools
 ```
-➤ NMAP network port scanner and (NSE) scripts (https://nmap.org)
+➤ NMAP - Network port scanner and (NSE) scripts (https://nmap.org)
 ➤ Database clients (e.g. sql*plus, sqlcmd, mysql, mongo, psql, DBvis (https://dbvis.com), Toad (https://www.quest.com/toad/))
 ➤ ODAT - Oracle Database Attacking Tool (https://github.com/quentinhardy/odat) 
 ➤ PowerUPsql - PowerShell Toolkit for Attacking SQL Server (https://github.com/NetSPI/PowerUpSQL) 
-➤ Metasploit framework (https://www.metasploit.com) 
+➤ Metasploit penetration testing framework (https://www.metasploit.com) 
 ➤ 'John the Ripper' - Password cracker (https://www.openwall.com/john/)
 ➤ Various scripts (source:kali/Github/your owns)
 ...
