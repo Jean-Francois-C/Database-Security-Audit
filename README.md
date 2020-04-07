@@ -1,6 +1,6 @@
 # Database security audit and penetration testing training
 
-Training course materials and reasearch notes that I created to teach how to perform a technical security assessment / penetration test of MSSQL, Oracle, MySQL, MongoDB and PostgreSQL databases.
+Training course materials and research notes that I created to teach how to perform a technical security assessment / penetration test of MSSQL, Oracle, MySQL, MongoDB and PostgreSQL databases.
 
 ### Content
 ```
