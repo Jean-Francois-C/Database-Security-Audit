@@ -1,7 +1,7 @@
 # Database security audit and penetration testing training
 
-Training course materials and research notes that I created to teach how to perform a technical security assessment / penetration test of :
-➤ Relational databases: MS SQL, Oracle, MySQL and PostgreSQL.
+Training course materials and research notes that I created to teach how to perform a technical security assessment / penetration test of :  
+➤ Relational databases: MS SQL, Oracle, MySQL and PostgreSQL.  
 ➤ NoSQL databases: MongoDB, Redis.
 
 ### Content
