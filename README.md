@@ -10,7 +10,7 @@ Training course materials and research notes that I created to teach how to perf
 ➤ Database Penetration Testing - List of attacks
 ➤ How to perform a network ports scan to locate a database
 ➤ How to perform a brute-force attack to identify valid database credentials (logins & passwords)
-➤ How to identify database vulnerabilities due to missing security patches
+➤ How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
 ➤ How to log into a a database using valid credentials  
 ➤ How to identify and exploit database and OS privileges escalation vulnerabilities (including configuration review)
 ➤ How to dump and crack database password hashes
@@ -23,6 +23,7 @@ Training course materials and research notes that I created to teach how to perf
 ➤ ODAT - Oracle Database Attacking Tool (https://github.com/quentinhardy/odat) 
 ➤ PowerUPsql - PowerShell Toolkit for Attacking SQL Server (https://github.com/NetSPI/PowerUpSQL)
 ➤ NoSQLmap - Automated NoSQL database enumeration and web application exploitation tool (https://github.com/codingo/NoSQLMap)
+➤ Nosql-Exploitation-Framework - A FrameWork For NoSQL Scanning and Exploitation Framework (https://github.com/torque59/Nosql-Exploitation-Framework)
 ➤ Metasploit penetration testing framework (https://www.metasploit.com) 
 ➤ 'John the Ripper' - Password cracker (https://www.openwall.com/john/)
 ➤ Various scripts (source:kali/Github/your owns)
