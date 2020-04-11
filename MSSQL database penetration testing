@@ -7,7 +7,7 @@ INDEX
 02. MSSQL Database Penetration Testing - List of attacks
 03. How to perform a network ports scan to locate an MSSQL Database
 04. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
-05. How to identify MSSQL database vulnerabilities due to missing security patches
+05. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
 06. How to log into a MSSQL Database using valid credentials
 07. How to identify and exploit database and OS privileges escalation vulnerabilities
 08. How to dump and crack MSSQL password hashes
@@ -16,6 +16,8 @@ INDEX
 ============================================================================================================
 01. REMINDER - definitions
 ============================================================================================================
+• MS SQL Server is a Relational Database Management System.
+
 • SCHEMA
 A schema is a collection of logical structures of data, or schema objects. 
 A schema is owned by a database user and has the same name as that user. 
@@ -262,9 +264,19 @@ Examples:
 	COMMENTAIRES : WIN-F820SQBBVJR : COMPLETED VULNERABILITY CHECK: Weak Login Password
   
 
-============================================================================================================
-05. How to identify MS SQL database vulnerabilities due to missing security patches
-============================================================================================================
+=========================================================================================================================================
+05. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
+=========================================================================================================================================
+
+Step 1. Identify the database version (e.g. version disclosed in software banner, service fingerprinting) using various tools such as Nmap or Metasploit discovery modules.
+        Obviously if you already have credentials it is better to use them and to log into the database to check its exact version and its patching level.
+
+Step 2. Search on the Internet (e.g. database provider website, www.cvedetails.com) if the version is still supported and not prone to known vulnerabilities.
+
+Step 3. Look for known exploit using various tools and sources such as ExploitDB / SearchSploit, Metasploit, Github, ...
+
+Tools and scripts
+=================
 
 1. NMAP - ‘ms-sql-info’ module (https://nmap.org) 
 --------------------------------------------------------------------
@@ -339,7 +351,50 @@ Examples:
 	Currentlogin           : sa
 	IsSysadmin             : Yes
 	ActiveSessions         : 1	
-	
+
+4. Searchsploit / ExploitDB
+----------------------------
+• Look for public exploits in the ExploitDB database using searchsploit.
+
+jeff@kali-Linux:~$ searchsploit Microsoft SQL Server -www
+------------------------------------------------------------------------------------------------------------------------- --------------------------------------------
+ Exploit Title                                                                                                           |  URL
+------------------------------------------------------------------------------------------------------------------------- --------------------------------------------
+<SNIP>
+Microsoft SQL Server - 'sp_replwritetovarbin()' Heap Overflow                                                            | https://www.exploit-db.com/exploits/7501
+Microsoft SQL Server - Database Link Crawling Command Execution (Metasploit)                                             | https://www.exploit-db.com/exploits/23649
+Microsoft SQL Server - Distributed Management Objects 'sqldmo.dll' Buffer Overflow (PoC)                                 | https://www.exploit-db.com/exploits/4379
+Microsoft SQL Server - Distributed Management Objects Buffer Overflow                                                    | https://www.exploit-db.com/exploits/4398
+Microsoft SQL Server - Hello Overflow (MS02-056) (Metasploit)                                                            | https://www.exploit-db.com/exploits/16398
+Microsoft SQL Server - Payload Execution (Metasploit)                                                                    | https://www.exploit-db.com/exploits/16395
+Microsoft SQL Server - Payload Execution (via SQL Injection) (Metasploit)                                                | https://www.exploit-db.com/exploits/16394
+Microsoft SQL Server - Resolution Overflow (MS02-039) (Metasploit)                                                       | https://www.exploit-db.com/exploits/16393
+Microsoft SQL Server - sp_replwritetovarbin Memory Corruption (MS09-004) (Metasploit)                                    | https://www.exploit-db.com/exploits/16392
+Microsoft SQL Server - sp_replwritetovarbin Memory Corruption (MS09-004) (via SQL Injection) (Metasploit)                | https://www.exploit-db.com/exploits/16396
+Microsoft SQL Server 2000 - 'SQLXML' Buffer Overflow (PoC)                                                               | https://www.exploit-db.com/exploits/21540
+Microsoft SQL Server 2000 - Database Consistency Checkers Buffer Overflow                                                | https://www.exploit-db.com/exploits/21650
+Microsoft SQL Server 2000 - Password Encrypt procedure Buffer Overflow                                                   | https://www.exploit-db.com/exploits/21549
+Microsoft SQL Server 2000 - Resolution Service Heap Overflow                                                             | https://www.exploit-db.com/exploits/21652
+Microsoft SQL Server 2000 - SQLXML Script Injection                                                                      | https://www.exploit-db.com/exploits/21541
+Microsoft SQL Server 2000 - User Authentication Remote Buffer Overflow                                                   | https://www.exploit-db.com/exploits/21693
+Microsoft SQL Server 2000 - sp_MScopyscript SQL Injection                                                                | https://www.exploit-db.com/exploits/21651
+Microsoft SQL Server 2000 / Microsoft Jet 4.0 Engine - Unicode Buffer Overflow (PoC)                                     | https://www.exploit-db.com/exploits/21569
+Microsoft SQL Server 7.0 - Remote Denial of Service (1)                                                                  | https://www.exploit-db.com/exploits/24639
+Microsoft SQL Server 7.0 - Remote Denial of Service (2)                                                                  | https://www.exploit-db.com/exploits/24640
+Microsoft SQL Server 7.0/2000 / Data Engine 1.0/2000 - xp_displayparamstmt Buffer Overflow                               | https://www.exploit-db.com/exploits/20451
+Microsoft SQL Server 7.0/2000 / Data Engine 1.0/2000 - xp_peekqueue Buffer Overflow                                      | https://www.exploit-db.com/exploits/20457
+Microsoft SQL Server 7.0/2000 / Data Engine 1.0/2000 - xp_showcolv Buffer Overflow                                       | https://www.exploit-db.com/exploits/20456
+Microsoft SQL Server 7.0/2000 / MSDE - Named Pipe Denial of Service (MS03-031)                                           | https://www.exploit-db.com/exploits/22957
+Microsoft SQL Server 7.0/2000 JET Database Engine 4.0 - Buffer Overrun                                                   | https://www.exploit-db.com/exploits/22576
+Microsoft SQL Server 7.0/7.0 SP1 - NULL Data Denial of Service                                                           | https://www.exploit-db.com/exploits/19638
+Microsoft SQL Server Management Studio 17.9 - '.xel' XML External Entity Injection                                       | https://www.exploit-db.com/exploits/45585
+Microsoft SQL Server Management Studio 17.9 - '.xmla' XML External Entity Injection                                      | https://www.exploit-db.com/exploits/45587
+Microsoft SQL Server Management Studio 17.9 - XML External Entity Injection                                              | https://www.exploit-db.com/exploits/45583
+Microsoft Windows SQL Server - Remote Denial of Service (MS03-031)                                                       | https://www.exploit-db.com/exploits/65
+<SNIP>
+------------------------------------------------------------------------------------------------------------------------- --------------------------------------------
+Shellcodes: No Result
+
 
 ============================================================================================================
 06. How to log into a MSSQL Database using valid credentials
