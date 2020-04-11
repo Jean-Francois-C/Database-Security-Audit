@@ -7,7 +7,7 @@ INDEX
 02. MySQL Database Penetration Testing - List of attacks
 03. How to perform a network TCP ports scan to locate an MySQL Database
 04. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
-05. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)06. How to log into a MySQL database using valid credentials
+05. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
 06. How to log into a MySQL Database using valid credentials
 07. How to identify and exploit database and OS privileges escalation vulnerabilities
 08. How to dump and crack MySQL password hashes
