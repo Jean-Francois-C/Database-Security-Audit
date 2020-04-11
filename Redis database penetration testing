@@ -29,7 +29,7 @@ INDEX
 
 • The Redis module RedisJSON implements "the JavaScript Object Notation (JSON) Data Interchange Standard" as a native data type.
 
-• Typically, NoSQL DB's use XML, YAML, JSON, and BSON to encode the data. MongoDB uses Binary JSON (BSON).
+• Typically, NoSQL DB's use XML, YAML, JSON, and BSON to encode the data. 
 • NoSQL databases have their own terminology that is different from typical relational databases such as MSSQL and MySQL:
   + Document = Row or Record
   + Collection = Table or View
