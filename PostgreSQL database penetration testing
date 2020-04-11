@@ -7,8 +7,8 @@ INDEX
 02. PostgreSQL Database Penetration Testing - List of attacks
 03. How to perform a network TCP ports scan to locate an PostgreSQL Database
 04. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
-05. How to identify PostgreSQL database vulnerabilities due to missing security patches
-06. How to log into a PostgreSQL database using valid credentials
+05. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
+06. How to log into a PostgreSQL Database using valid credentials
 07. How to identify and exploit database and OS privilege escalation vulnerabilities
 08. How to dump and crack PostgreSQL password hashes
 
@@ -280,15 +280,23 @@ msf5 auxiliary(scanner/postgres/postgres_login) > run
 msf5 auxiliary(scanner/postgres/postgres_login) > 
 
 
-==========================================================================================================
-05. How to identify PostgreSQL database vulnerabilities due to missing security patches
-==========================================================================================================
+=========================================================================================================================================
+05. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
+=========================================================================================================================================
 
+Step 1. Identify the database version (e.g. version disclosed in software banner, service fingerprinting) using various tools such as Nmap or Metasploit discovery modules.
+        Obviously if you already have credentials it is better to use them and to log into the database to check its exact version and its patching level.
+
+Step 2. Search on the Internet (e.g. database provider website, www.cvedetails.com) if the version is still supported and not prone to known vulnerabilities.
+
+Step 3. Look for known exploit using various tools and sources such as ExploitDB / SearchSploit, Metasploit, Github, ...
+
+Tools and scripts
+=================
 In addition to login manually with PGSQL or using NMAP, there is the 'PostgreSQL Version Probe' module of Metasploit that can enumerate the version of PostgreSQL servers.
 
 > auxiliary/scanner/postgres/postgres_version
 > https://www.rapid7.com/db/modules/auxiliary/scanner/postgres/postgres_version
-
 
 msf5 > use auxiliary/scanner/postgres/postgres_version
 msf5 auxiliary(scanner/postgres/postgres_version) > options
@@ -314,7 +322,7 @@ msf5 auxiliary(scanner/postgres/postgres_version) > run
 [*] Auxiliary module execution completed
 
 
-> Then we can use the tool searchsploit to identify PostgreSQL exploits:
+> Look for public exploits in the ExploitDB database using searchsploit.
  
 pentester@Security-Audit-01:~$ searchsploit postgresql
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------- ----------------------------------------
