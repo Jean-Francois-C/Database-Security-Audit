@@ -9,7 +9,7 @@ INDEX
 04. How to perform a SID Brute-force attack to identify a valid SID
 05. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
 06. How to identify valid credentials using a TNS Listener Poisoning Attack (MITM - CVE 2012-1675) 
-07. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)07. How to identify Oracle database vulnerabilities due to missing security patches
+07. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
 08. How to connect to an Oracle Database using valid credentials
 09. How to identify and exploit database and OS privileges escalation vulnerabilities
 10. How to dump and crack Oracle password hashes (10g, 11g, 12c)
