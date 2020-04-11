@@ -16,12 +16,14 @@ INDEX
 ============================================================================================================
 01. REMINDER - definitions
 ============================================================================================================
-• MS SQL Server is a Relational Database Management System.
+• RDBMS
+MS SQL Server is a Relational Database Management System developed by Microsoft. 
+A relational database refers to a database that stores data in a structured format, using rows and columns. 
 
 • SCHEMA
 A schema is a collection of logical structures of data, or schema objects. 
 A schema is owned by a database user and has the same name as that user. 
-Each user owns a single schema. Schema objects can be created and manipulated with SQL
+Each user owns a single schema. Schema objects can be created and manipulated with SQL.
 
 • TABLES
 Tables are the basic unit of data storage in an MS SQL Database. Data is stored in rows and columns. 
