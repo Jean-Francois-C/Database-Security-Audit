@@ -16,7 +16,11 @@ INDEX
 01. General information
 ==============================================================================================================
 
-• Redis (Remote Dictionary Server) is an open source (BSD licensed), in-memory data structure store, used as a database, cache and message broker. It is an in-memory data structure project implementing a distributed, in-memory key-value database with optional durability. Redis supports different kinds of abstract data structures, such as strings, lists, maps, sets, sorted sets, HyperLogLogs, bitmaps, streams, and spatial indexes. 
+• Redis (Remote Dictionary Server) is calssified as a NoSQL database.
+
+• Redis is an open source (BSD licensed), in-memory data structure store, used as a database, cache and message broker. 
+  It is an in-memory data structure project implementing a distributed, in-memory key-value database with optional durability. 
+  Redis supports different kinds of abstract data structures, such as strings, lists, maps, sets, sorted sets, HyperLogLogs, bitmaps, streams, and spatial indexes. 
 
 • Redis maps keys to types of values. An important difference between Redis and other structured storage systems is that Redis supports not only strings, but also abstract data types:
   + Lists of strings
@@ -28,17 +32,6 @@ INDEX
   + Geospatial data through the implementation of the geohash technique, available since Redis 3.2.
 
 • The Redis module RedisJSON implements "the JavaScript Object Notation (JSON) Data Interchange Standard" as a native data type.
-
-• Typically, NoSQL DB's use XML, YAML, JSON, and BSON to encode the data. 
-• NoSQL databases have their own terminology that is different from typical relational databases such as MSSQL and MySQL:
-  + Document = Row or Record
-  + Collection = Table or View
-  + Field = Column
-
-• So, a typical NoSQL database collection (table) holds one or more "documents" (records). 
-• Each document can have one or more fields (columns).
-• It's being used more and more in the production of agile applications i.e. quick to develop and deploy and often used in "big data" type projects.
-
 
 REDIS authentication
 --------------------
