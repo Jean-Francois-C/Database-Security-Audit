@@ -9,7 +9,7 @@ INDEX
 04. How to perform a SID Brute-force attack to identify a valid SID
 05. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
 06. How to identify valid credentials using a TNS Listener Poisoning Attack (MITM - CVE 2012-1675) 
-07. How to identify Oracle database vulnerabilities due to missing security patches
+07. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)07. How to identify Oracle database vulnerabilities due to missing security patches
 08. How to connect to an Oracle Database using valid credentials
 09. How to identify and exploit database and OS privileges escalation vulnerabilities
 10. How to dump and crack Oracle password hashes (10g, 11g, 12c)
@@ -19,6 +19,10 @@ INDEX
 =============================================================================================================================
 01. REMINDER (basic definitions) 
 =============================================================================================================================
+• RDBMS 
+Oracle database is a Relational Database Management System. 
+An RDBMS that implements object-oriented features such as user-defined types, inheritance, and polymorphism is called an object-relational database management system (ORDBMS).
+
 • SCHEMA
 A schema is a collection of logical structures of data, or schema objects. A schema is owned by a database user and has the same name as that user.
 Each user owns a single schema. Schema objects can be created and manipulated with SQL
@@ -280,9 +284,19 @@ msf > use auxiliary/scanner/oracle/tnspoison_checker
       msf auxiliary(tnspoison_checker) > run
     
 
-=====================================================================================
-07. How to identify Oracle database vulnerabilities due to missing security patches
-=====================================================================================
+=========================================================================================================================================
+07. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
+=========================================================================================================================================
+
+Step 1. Identify the database version (e.g. version disclosed in software banner, service fingerprinting) using various tools such as Nmap, ODAT or Metasploit discovery modules.
+        Obviously if you already have credentials it is better to use them and to log into the database to check its exact version and its patching level.
+
+Step 2. Search on the Internet (e.g. database provider website, www.cvedetails.com) if the version is still supported and not prone to known vulnerabilities.
+
+Step 3. Look for known exploit using various tools and sources such as ExploitDB / SearchSploit, Metasploit, Github, ...
+
+Tools and scripts
+=================
 
 1. ODAT - 'tnscmd' module (https://github.com/quentinhardy/odat/wiki/all)
 --------------------------------------------------------------------------
@@ -303,6 +317,120 @@ pentester@LinuxVM > msfconsole
 msf > use auxiliary/admin/oracle/tnscmd
       msf auxiliary(tnscmd) > show actions
 
+
+3. Searchsploit / ExploitDB
+----------------------------
+• Look for public exploits in the ExploitDB database using searchsploit.
+
+jeff@kali-Linux:~$ searchsploit oracle
+----------------------------------------------------------------------------------------------------------------------------- ----------------------------------------
+ Exploit Title                                                                                                               |  Path (/usr/share/exploitdb/)
+----------------------------------------------------------------------------------------------------------------------------- ----------------------------------------
+<SNIP>
+Oracle (oidldapd connect) - Local Command Line Overflow                                                                      | exploits/linux/local/183.c
+Oracle - 'HtmlConverter.exe' Local Buffer Overflow                                                                           | exploits/windows/local/39284.txt
+Oracle - Document Capture BlackIce DEVMODE                                                                                   | exploits/windows/remote/9805.html
+Oracle - Document Capture Insecure READ Method                                                                               | exploits/windows/remote/16056.txt
+Oracle - Outside-In '.DOCX' File Parsing Memory Corruption                                                                   | exploits/windows/dos/36788.txt
+Oracle - SYS.LT.COMPRESSWORKSPACETREE Evil Cursor                                                                            | exploits/multiple/local/10265.txt
+Oracle - SYS.LT.MERGEWORKSPACE Evil Cursor                                                                                   | exploits/multiple/local/10264.txt
+Oracle - SYS.LT.REMOVEWORKSPACE Evil Cursor                                                                                  | exploits/multiple/local/10268.txt
+Oracle - ctxsys.drvxtabc.create_tables                                                                                       | exploits/multiple/local/10267.txt
+Oracle - ctxsys.drvxtabc.create_tables Evil Cursor                                                                           | exploits/multiple/local/10266.txt
+Oracle - xdb.xdb_pitrig_pkg.PITRIG_DROPMETADATA procedure                                                                    | exploits/windows/remote/18093.txt
+Oracle 10/11g - 'exp.exe?file' Local Buffer Overflow                                                                         | exploits/windows/local/16169.py
+Oracle 10g (Windows x86) - 'PROCESS_DUP_HANDLE' Local Privilege Escalation                                                   | exploits/windows_x86/local/3451.c
+Oracle 10g - 'CTX_DOC.MARKUP' SQL Injection                                                                                  | exploits/multiple/local/4564.txt
+Oracle 10g - 'LT.FINDRICSET' SQL Injection (IDS Evasion)                                                                     | exploits/multiple/local/4572.txt
+Oracle 10g - 'SYS.LT.COMPRESSWORKSPACETREE' SQL Injection (1)                                                                | exploits/multiple/local/7677.txt
+Oracle 10g - 'SYS.LT.COMPRESSWORKSPACETREE' SQL Injection (2)                                                                | exploits/multiple/local/9072.txt
+Oracle 10g - Alter Session Integer Overflow                                                                                  | exploits/multiple/dos/28293.txt
+Oracle 10g - KUPM$MCP.MAIN SQL Injection                                                                                     | exploits/multiple/remote/3585.pl
+Oracle 10g - KUPV$FT.ATTACH_JOB Grant/Revoke dba Permission                                                                  | exploits/multiple/remote/3359.pl
+Oracle 10g - KUPW$WORKER.MAIN Grant/Revoke dba Permission                                                                    | exploits/multiple/remote/3358.pl
+Oracle 10g - KUPW$WORKER.MAIN SQL Injection (2)                                                                              | exploits/multiple/remote/3375.pl
+Oracle 10g - MDSYS.SDO_TOPO_DROP_FTBL SQL Injection (Metasploit)                                                             | exploits/multiple/local/8074.rb
+Oracle 10g - Multiple Privilege Escalation Vulnerabilities                                                                   | exploits/multiple/remote/33600.rb
+Oracle 10g - SYS.DBMS_CDC_IMPDP.BUMP_SEQUENCE PL / SQL Injection                                                             | exploits/multiple/local/3177.txt
+Oracle 10g - SYS.KUPV$FT.ATTACH_JOB PL / SQL Injection                                                                       | exploits/multiple/local/3179.txt
+Oracle 10g - SYS.KUPW$WORKER.MAIN PL / SQL Injection                                                                         | exploits/multiple/local/3178.txt
+Oracle 10g - SYS.LT.MERGEWORKSPACE SQL Injection                                                                             | exploits/multiple/local/7676.txt
+Oracle 10g - SYS.LT.REMOVEWORKSPACE SQL Injection                                                                            | exploits/multiple/local/7675.txt
+Oracle 10g Database - 'SUBSCRIPTION_NAME' SQL Injection (1)                                                                  | exploits/multiple/remote/25452.pl
+Oracle 10g Database - 'SUBSCRIPTION_NAME' SQL Injection (2)                                                                  | exploits/multiple/remote/25453.pl
+Oracle 10g KUPM$MCP.MAIN - SQL Injection (2)                                                                                 | exploits/multiple/remote/3584.pl
+Oracle 10g KUPV$FT.ATTACH_JOB - SQL Injection (2)                                                                            | exploits/multiple/remote/3376.pl
+Oracle 10g Portal - 'Key' Cross-Site Scripting                                                                               | exploits/multiple/remote/29371.txt
+Oracle 10g R1 - 'PITRIG_TRUNCATE' Get Users Hash / PL/SQL Injection                                                          | exploits/multiple/local/4995.sql
+Oracle 10g R1 - 'pitrig_drop' Get Users Hash / PL/SQL Injection                                                              | exploits/multiple/local/4994.sql
+Oracle 10g R1 - xdb.xdb_pitrig_pkg Buffer Overflow (PoC)                                                                     | exploits/multiple/dos/4997.sql
+Oracle 10g R1 - xdb.xdb_pitrig_pkg PLSQL Injection (Change Sys Password)                                                     | exploits/multiple/local/4996.sql
+Oracle 10g Release 2 - 'DBMS_EXPORT_EXTENSION' SQL                                                                           | exploits/multiple/local/1719.txt
+Oracle 10g Secure Enterprise Search - 'search_p_groups' Cross-Site Scripting                                                 | exploits/multiple/remote/33082.txt
+Oracle 10g/11g - 'SYS.LT.FINDRICSET' SQL Injection (1)                                                                       | exploits/multiple/local/4570.pl
+Oracle 10g/11g - 'SYS.LT.FINDRICSET' SQL Injection (2)                                                                       | exploits/multiple/local/4571.pl
+Oracle 10gR2 - TNS Listener AUTH_SESSKEY Buffer Overflow (Metasploit)                                                        | exploits/windows/remote/16342.rb
+Oracle 11.1 - Database Network Foundation Heap Memory Corruption                                                             | exploits/multiple/dos/33080.txt
+Oracle 11g - Multiple Privilege Escalation Vulnerabilities                                                                   | exploits/multiple/remote/33601.rb
+Oracle 8 - File Access                                                                                                       | exploits/linux/local/19142.sh
+Oracle 8 - oratclsh Suid                                                                                                     | exploits/linux/local/19125.txt
+Oracle 8 8.1.5 - Intelligent Agent (1)                                                                                       | exploits/multiple/local/19460.sh
+Oracle 8 8.1.5 - Intelligent Agent (2)                                                                                       | exploits/multiple/local/19461.c
+Oracle 8 Server - 'TNSLSNR80.EXE' Denial of Service                                                                          | exploits/windows/dos/20779.pl
+Oracle 8.1.7 - JSP/JSPSQL Remote File Reading                                                                                | exploits/jsp/remote/20592.txt
+Oracle 8.1.x/9.0/9.2 - TNS Listener Service_CurLoad Remote Denial of Service                                                 | exploits/multiple/dos/21782.txt
+Oracle 8.x - cmctl Buffer Overflow                                                                                           | exploits/linux/local/20411.c
+Oracle 8.x/9.x/10.x Database - Multiple SQL Injections                                                                       | exploits/multiple/remote/25396.txt
+Oracle 8/9i - DBSNMP Oracle Home Environment Variable Buffer Overflow                                                        | exploits/windows/local/21044.c
+Oracle 8i - 'dbsnmp' Remote Denial of Service                                                                                | exploits/multiple/dos/21232.c
+Oracle 8i - TNS Listener 'ARGUMENTS' Remote Buffer Overflow (Metasploit)                                                     | exploits/windows/remote/16340.rb
+Oracle 8i - TNS Listener Buffer Overflow                                                                                     | exploits/windows/remote/20980.c
+Oracle 8i - TNS Listener Local Command Parameter Buffer Overflow                                                             | exploits/linux/local/21362.c
+Oracle 8i - TNS Listener SERVICE_NAME Buffer Overflow (Metasploit)                                                           | exploits/windows/remote/16341.rb
+Oracle 9 - XML DB Cross-Site Scripting                                                                                       | exploits/multiple/remote/26332.txt
+Oracle 9.0 iSQL*Plus - TLS Listener Remote Denial of Service                                                                 | exploits/multiple/dos/26331.txt
+Oracle 9.2.0.1 - Universal XDB HTTP Pass Overflow (Metasploit)                                                               | exploits/windows/remote/1365.pm
+Oracle 9.x - 'Database' / Statement Buffer Overflow                                                                          | exploits/multiple/dos/23656.txt
+Oracle 9i - Multiple Vulnerabilities                                                                                         | exploits/unix/remote/24353.sql
+Oracle 9i Application Server 9.0.2 Web Cache Administration Tool - Denial of Service                                         | exploits/multiple/dos/21911.txt
+Oracle 9i XDB (Windows x86) - FTP PASS Overflow (Metasploit)                                                                 | exploits/windows_x86/remote/16731.rb
+Oracle 9i XDB (Windows x86) - FTP UNLOCK Overflow (Metasploit)                                                               | exploits/windows_x86/remote/16714.rb
+Oracle 9i XDB (Windows x86) - HTTP PASS Overflow (Metasploit)                                                                | exploits/windows_x86/remote/16809.rb
+Oracle 9i XDB 9.2.0.1 - HTTP PASS Buffer Overflow                                                                            | exploits/windows/remote/42780.py
+Oracle 9i/10g - 'extproc' Local/Remote Command Execution                                                                     | exploits/multiple/remote/2951.sql
+Oracle 9i/10g - 'read/write/execute' ation Suite                                                                             | exploits/multiple/remote/2837.sql
+Oracle 9i/10g - 'utl_file' FileSystem Access                                                                                 | exploits/linux/remote/2959.sql
+Oracle 9i/10g - ACTIVATE_SUBSCRIPTION SQL Injection                                                                          | exploits/windows/remote/3364.pl
+Oracle 9i/10g - DBMS_EXPORT_EXTENSION SQL Injection                                                                          | exploits/multiple/remote/3269.pl
+Oracle 9i/10g - DBMS_METADATA.GET_DDL SQL Injection                                                                          | exploits/multiple/remote/3363.pl
+Oracle 9i/10g - Database Fine Grained Audit Logging Failure                                                                  | exploits/multiple/remote/25613.txt
+Oracle 9i/10g - Evil Views Change Passwords                                                                                  | exploits/multiple/local/4203.sql
+Oracle 9i/10g ACTIVATE_SUBSCRIPTION - SQL Injection (2)                                                                      | exploits/multiple/remote/3378.pl
+Oracle 9i/10g DBMS_METADATA.GET_DDL - SQL Injection (2)                                                                      | exploits/multiple/remote/3377.pl
+Oracle 9i/10g Database - Network Foundation Remote Overflow                                                                  | exploits/multiple/remote/33084.txt
+Oracle 9i/10g Database - Remote Network Authentication                                                                       | exploits/multiple/remote/33081.cpp
+Oracle 9i/10g Database - TNS Command Remote Denial of Service                                                                | exploits/multiple/dos/33083.txt
+Oracle DataDirect - Multiple Native Wire Protocol ODBC Drivers HOST Attribute Stack Buffer Overflows (PoC)                   | exploits/windows/dos/18007.txt
+Oracle DataDirect ODBC Drivers - HOST Attribute 'arsqls24.dll' Stack Buffer Overflow (PoC)                                   | exploits/windows/dos/18052.php
+Oracle Database - Protocol Authentication Bypass                                                                             | exploits/multiple/local/22069.py
+Oracle Database - Remote Listener Memory Corruption                                                                          | exploits/multiple/dos/33506.py
+Oracle Database - SQL Compiler Views Unauthorized Manipulation                                                               | exploits/multiple/local/30295.sql
+Oracle Database 10 g - XML DB xdb.xdb_pitrig_pkg Package PITRIG_TRUNCATE Function Overflow                                   | exploits/multiple/remote/31010.sql
+Oracle Database 10.1 - MDSYS.MD2.SDO_CODE_SIZE Buffer Overflow                                                               | exploits/multiple/remote/25397.txt
+Oracle Database 10.1.0.5 < 10.2.0.4 - AUTH_SESSKEY Length Validation Remote Buffer Overflow                                  | exploits/windows/remote/9905.cpp
+Oracle Database 8i/9i - Multiple Directory Traversal Vulnerabilities                                                         | exploits/windows/remote/25195.txt
+Oracle Database Client System Analyzer - Arbitrary File Upload (Metasploit)                                                  | exploits/windows/remote/22714.rb
+Oracle Database PL/SQL Statement - Multiple SQL Injections s                                                                 | exploits/windows/local/933.sql
+Oracle Database Server 10.1.0.2 - Local Buffer Overflow                                                                      | exploits/windows/local/932.sql
+Oracle Database Server 11.1 - 'CREATE ANY Directory' Privilege Escalation                                                    | exploits/multiple/remote/32475.sql
+Oracle Database Server 8.1.7/9.0.x - ctxsys.driload Access Validation                                                        | exploits/multiple/remote/24567.txt
+Oracle Database Server 9.0.x - Oracle Binary Local Buffer Overflow                                                           | exploits/linux/local/23258.c
+Oracle Database Server 9i/10g - 'XML' Local Buffer Overflow                                                                  | exploits/windows/local/1455.txt
+Oracle Database Vault - 'ptrace(2)' Local Privilege Escalation                                                               | exploits/linux/local/7177.c
+Oracle9i Database - Default Library Directory Privilege Escalation                                                           | exploits/unix/local/24335.txt
+<SNIP>
+----------------------------------------------------------------------------------------------------------------------------- ----------------------------------------
+Shellcodes: No Result
 
 
 ============================================================================================================================
