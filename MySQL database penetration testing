@@ -7,8 +7,8 @@ INDEX
 02. MySQL Database Penetration Testing - List of attacks
 03. How to perform a network TCP ports scan to locate an MySQL Database
 04. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
-05. How to identify MySQL database vulnerabilities due to missing security patches
-06. How to log into a MySQL database using valid credentials
+05. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)06. How to log into a MySQL database using valid credentials
+06. How to log into a MySQL Database using valid credentials
 07. How to identify and exploit database and OS privileges escalation vulnerabilities
 08. How to dump and crack MySQL password hashes
 
@@ -16,6 +16,9 @@ INDEX
 ==========================================================================================================
 01. Reminder - definitions
 ==========================================================================================================
+• RDBMS
+MySQL is an open-source Relational Database Management System that works on many platforms. 
+It provides multi-user access to support many storage engines and is backed by Oracle.
 
 • SCHEMA
 In MySQL, physically, a schema is synonymous with a database. 
@@ -156,12 +159,19 @@ Performs password guessing against MySQL.
 pentester@KaliLinux> hydra -L /root/<your_username_file> -P /root/<your_password_file> <IP> mysql
 
 
+=========================================================================================================================================
+05. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
+=========================================================================================================================================
 
+Step 1. Identify the database version (e.g. version disclosed in software banner, service fingerprinting) using various tools such as Nmap or Metasploit discovery modules.
+        Obviously if you already have credentials it is better to use them and to log into the database to check its exact version and its patching level.
 
-==========================================================================================================
-05. How to identify MySQL database vulnerabilities due to missing security patches
-==========================================================================================================
+Step 2. Search on the Internet (e.g. database provider website, www.cvedetails.com) if the version is still supported and not prone to known vulnerabilities.
 
+Step 3. Look for known exploit using various tools and sources such as ExploitDB / SearchSploit, Metasploit, Github, ...
+
+Tools and scripts
+=================
 
 * NMAP - 'mysql-info' module
 --------------------------------------------------
@@ -190,7 +200,7 @@ This module enumerates the version of MySQL servers.
 > https://www.rapid7.com/db/modules/auxiliary/scanner/mysql/mysql_version
 
 
-Example of a recent critical vulnerability:
+* Example of a recent critical vulnerability:
 ------------------------------------------
 > CVE-2016-6662 - MySQL Remote Root Code Execution / Privilege Escalation
   Affected MySQL versions (including the latest):
@@ -200,6 +210,111 @@ Example of a recent critical vulnerability:
 
 https://legalhackers.com/advisories/MySQL-Exploit-Remote-Root-Code-Execution-Privesc-CVE-2016-6662.html
 https://legalhackers.com/advisories/MySQL-Maria-Percona-PrivEscRace-CVE-2016-6663-5616-Exploit.html
+
+
+* Searchsploit / ExploitDB
+----------------------------
+• Look for public exploits in the ExploitDB database using searchsploit.
+
+jeff@kali-Linux:~$ searchsploit mysql
+----------------------------------------------------------------------------------------------------------------------------- ----------------------------------------
+ Exploit Title                                                                                                               |  Path (/usr/share/exploitdb/)
+----------------------------------------------------------------------------------------------------------------------------- ----------------------------------------
+<SNIP>
+MySQL (Linux) - Database Privilege Escalation                                                                                | exploits/linux/local/23077.pl
+MySQL (Linux) - Heap Overrun (PoC)                                                                                           | exploits/linux/dos/23076.pl
+MySQL (Linux) - Stack Buffer Overrun (PoC)                                                                                   | exploits/linux/dos/23075.pl
+MySQL - 'Stuxnet Technique' Windows Remote System                                                                            | exploits/windows/remote/23083.txt
+MySQL - Authentication Bypass                                                                                                | exploits/multiple/remote/19092.py
+MySQL - Denial of Service (PoC)                                                                                              | exploits/linux/dos/23078.txt
+MySQL - Remote User Enumeration                                                                                              | exploits/multiple/remote/23081.pl
+MySQL - yaSSL CertDecoder::GetName Buffer Overflow (Metasploit)                                                              | exploits/linux/remote/16850.rb
+MySQL / MariaDB - Geometry Query Denial of Service                                                                           | exploits/linux/dos/38392.txt
+MySQL / MariaDB / PerconaDB 5.5.51/5.6.32/5.7.14 - Code Execution / Privilege Escalation                                     | exploits/linux/local/40360.txt
+MySQL / MariaDB / PerconaDB 5.5.x/5.6.x/5.7.x - 'mysql' System User Privilege Escalation / Race Condition                    | exploits/linux/local/40678.c
+MySQL / MariaDB / PerconaDB 5.5.x/5.6.x/5.7.x - 'root' System User Privilege Escalation                                      | exploits/linux/local/40679.sh
+MySQL 3.20.32 a/3.23.34 - Root Operation Symbolic Link File Overwriting                                                      | exploits/unix/local/20718.txt
+MySQL 3.20.32/3.22.x/3.23.x - Null Root Password Weak Default Configuration (1)                                              | exploits/linux/remote/21725.c
+MySQL 3.20.32/3.22.x/3.23.x - Null Root Password Weak Default Configuration (2)                                              | exploits/linux/remote/21726.c
+MySQL 3.22.27/3.22.29/3.23.8 - GRANT Global Password Changing                                                                | exploits/multiple/local/19721.txt
+MySQL 3.23.x - 'mysqld' Local Privilege Escalation                                                                           | exploits/linux/local/22340.txt
+MySQL 3.23.x/4.0.x - 'COM_CHANGE_USER' Password Length Account                                                               | exploits/unix/remote/22084.c
+MySQL 3.23.x/4.0.x - COM_CHANGE_USER Password Memory Corruption                                                              | exploits/unix/remote/22085.txt
+MySQL 3.23.x/4.0.x - Password Handler Buffer Overflow                                                                        | exploits/linux/dos/23138.txt
+MySQL 3.23.x/4.0.x - Remote Buffer Overflow                                                                                  | exploits/linux/remote/98.c
+MySQL 3.x/4.0.x - Weak Password Encryption                                                                                   | exploits/linux/local/22565.c
+MySQL 3.x/4.x - ALTER TABLE/RENAME Forces Old Permission Checks                                                              | exploits/linux/remote/24669.txt
+MySQL 4.0.17 (Linux) - User-Defined Function (UDF) Dynamic Library (1)                                                       | exploits/linux/local/1181.c
+MySQL 4.1.18/5.0.20 - Local/Remote Information Leakage                                                                       | exploits/linux/remote/1742.c
+MySQL 4.1/5.0 - Authentication Bypass                                                                                        | exploits/multiple/remote/24250.pl
+MySQL 4.1/5.0 - Zero-Length Password Authentication Bypass                                                                   | exploits/multiple/remote/311.pl
+MySQL 4.x - CREATE FUNCTION Arbitrary libc Code Execution                                                                    | exploits/multiple/remote/25209.pl
+MySQL 4.x - CREATE FUNCTION mysql.func Table Arbitrary Library Injection                                                     | exploits/multiple/remote/25210.php
+MySQL 4.x - CREATE Temporary TABLE Symlink Privilege Escalation                                                              | exploits/multiple/remote/25211.c
+MySQL 4.x/5.0 (Linux) - User-Defined Function (UDF) Dynamic Library (2)                                                      | exploits/linux/local/1518.c
+MySQL 4.x/5.0 (Windows) - User-Defined Function Command Execution                                                            | exploits/windows/remote/3274.txt
+MySQL 4.x/5.x - Server Date_Format Denial of Service                                                                         | exploits/linux/dos/28234.txt
+MySQL 4/5 - SUID Routine Miscalculation Arbitrary DML Statement Execution                                                    | exploits/linux/remote/28398.txt
+MySQL 4/5/6 - UDF for Command Execution                                                                                      | exploits/linux/local/7856.txt
+MySQL 5 - Command Line Client HTML Special Characters HTML Injection                                                         | exploits/linux/remote/32445.txt
+MySQL 5.0.18 - Query Logging Bypass                                                                                          | exploits/linux/remote/27326.txt
+MySQL 5.0.20 - COM_TABLE_DUMP Memory Leak/Remote Buffer Overflow                                                             | exploits/linux/remote/1741.c
+MySQL 5.0.45 - 'Alter' Denial of Service                                                                                     | exploits/multiple/dos/4615.txt
+MySQL 5.0.45 - (Authenticated) COM_CREATE_DB Format String (PoC)                                                             | exploits/multiple/dos/9085.txt
+MySQL 5.0.75 - 'sql_parse.cc' Multiple Format String Vulnerabilities                                                         | exploits/linux/dos/33077.c
+MySQL 5.0.x - IF Query Handling Remote Denial of Service                                                                     | exploits/linux/dos/30020.txt
+MySQL 5.0.x - Single Row SubSelect Remote Denial of Service                                                                  | exploits/linux/dos/29724.txt
+MySQL 5.1.13 - INFORMATION_SCHEMA Remote Denial of Service                                                                   | exploits/linux/dos/31444.txt
+MySQL 5.1.23 - Server InnoDB CONVERT_SEARCH_MODE_TO_INNOBASE Function Denial of Service                                      | exploits/linux/dos/30744.txt
+MySQL 5.1.48 - 'EXPLAIN' Denial of Service                                                                                   | exploits/linux/dos/34506.txt
+MySQL 5.1.48 - 'Temporary InnoDB' Tables Denial of Service                                                                   | exploits/php/dos/34505.txt
+MySQL 5.1/5.5 (Windows) - 'MySQLJackpot' Remote Command Execution                                                            | exploits/windows/remote/23073.txt
+MySQL 5.5.45 (x64) - Local Credentials Disclosure                                                                            | exploits/windows_x86-64/local/40337.py
+MySQL 5.5.45 - procedure analyse Function Denial of Service                                                                  | exploits/multiple/dos/39867.py
+MySQL 5.5.8 - Remote Denial of Service                                                                                       | exploits/windows/dos/18269.py
+MySQL 6.0 yaSSL 1.7.5 - Hello Message Buffer Overflow (Metasploit)                                                           | exploits/linux/remote/9953.rb
+MySQL 6.0.4 - Empty Binary String Literal Remote Denial of Service                                                           | exploits/linux/dos/32348.txt
+MySQL 6.0.9 - 'GeomFromWKB()' Function First Argument Geometry Value Handling Denial of Service                              | exploits/linux/dos/33398.txt
+MySQL 6.0.9 - SELECT Statement WHERE Clause Sub-query Denial of Service                                                      | exploits/linux/dos/33397.txt
+MySQL 6.0.9 - XPath Expression Remote Denial of Service                                                                      | exploits/linux/dos/32838.txt
+MySQL < 5.6.35 / < 5.7.17 - Integer Overflow                                                                                 | exploits/multiple/dos/41954.py
+MySQL AB Eventum 1.x - 'get_jsrs_data.php?F' Cross-Site Scripting                                                            | exploits/php/webapps/26058.txt
+MySQL AB Eventum 1.x - 'list.php?release' Cross-Site Scripting                                                               | exploits/php/webapps/26057.txt
+MySQL AB Eventum 1.x - 'view.php?id' Cross-Site Scripting                                                                    | exploits/php/webapps/26056.txt
+MySQL AB ODBC Driver 3.51 - Plain Text Password                                                                              | exploits/windows/local/22946.txt
+MySQL Blob Uploader 1.7 - 'download.php' SQL Injection / Cross-Site Scripting                                                | exploits/php/webapps/44709.txt
+MySQL Blob Uploader 1.7 - 'home-file-edit.php' SQL Injection / Cross-Site Scripting                                          | exploits/php/webapps/44710.txt
+MySQL Blob Uploader 1.7 - 'home-filet-edit.php' SQL Injection                                                                | exploits/php/webapps/44712.txt
+MySQL Blob Uploader 1.7 - 'home-filet-edit.php' SQL Injection / Cross-Site Scripting                                         | exploits/php/webapps/44711.txt
+MySQL Commander 2.7 - 'home' Remote File Inclusion                                                                           | exploits/php/webapps/3468.txt
+MySQL Edit Table 1.0 - 'id' SQL Injection                                                                                    | exploits/php/webapps/45639.txt
+MySQL Eventum 1.5.5 - 'login.php' SQL Injection                                                                              | exploits/php/webapps/1134.pl
+MySQL File Uploader 1.0 - 'id' SQL Injection                                                                                 | exploits/php/webapps/41267.txt
+MySQL MaxDB 7.5 - WAHTTP Server Remote Denial of Service                                                                     | exploits/multiple/dos/24805.txt
+MySQL MaxDB Webtool 7.5.00.23 - Remote Stack Overflow                                                                        | exploits/windows/remote/960.c
+MySQL Quick Admin 1.5.5 - 'cookie' Local File Inclusion                                                                      | exploits/php/webapps/6641.txt
+MySQL Quick Admin 1.5.5 - Local File Inclusion                                                                               | exploits/php/webapps/7020.txt
+MySQL Server 4/5 - Str_To_Date Remote Denial of Service                                                                      | exploits/linux/dos/28026.txt
+MySQL Smart Reports 1.0 - 'id' SQL Injection / Cross-Site Scripting                                                          | exploits/php/webapps/44708.txt
+MySQL Squid Access Report 2.1.4 - HTML Injection                                                                             | exploits/php/webapps/20055.txt
+MySQL Squid Access Report 2.1.4 - SQL Injection / Cross-Site Scripting                                                       | exploits/php/webapps/44483.txt
+MySQL User-Defined (Linux) (x32/x86_64) - 'sys_exec' Local Privilege Escalation                                              | exploits/linux/local/46249.py
+MySQL yaSSL (Linux) - SSL Hello Message Buffer Overflow (Metasploit)                                                         | exploits/linux/remote/16849.rb
+MySQL yaSSL (Windows) - SSL Hello Message Buffer Overflow (Metasploit)                                                       | exploits/windows/remote/16701.rb
+MySQLDriverCS 4.0.1 - SQL Injection                                                                                          | exploits/multiple/remote/35892.txt
+Mysql 3.22.x/3.23.x - Local Buffer Overflow                                                                                  | exploits/linux/local/20581.c
+OraclMySQL 5.1.48 - 'LOAD DATA INFILE' Denial of Service                                                                     | exploits/linux/dos/34510.txt
+Oracle MySQL (Windows) - FILE Privilege Abuse (Metasploit)                                                                   | exploits/windows/remote/35777.rb
+Oracle MySQL (Windows) - MOF Execution (Metasploit)                                                                          | exploits/windows/remote/23179.rb
+Oracle MySQL - 'ALTER DATABASE' Remote Denial of Service                                                                     | exploits/multiple/dos/14537.txt
+Oracle MySQL / MariaDB - Insecure Salt Generation Security Bypass                                                            | exploits/linux/remote/38109.pl
+Oracle MySQL 5.1.48 - 'HANDLER' Interface Denial of Service                                                                  | exploits/linux/dos/34520.txt
+Oracle MySQL < 5.1.49 - 'DDL' Statements Denial of Service                                                                   | exploits/linux/dos/34522.txt
+Oracle MySQL < 5.1.49 - 'WITH ROLLUP' Denial of Service                                                                      | exploits/multiple/dos/15467.txt
+Oracle MySQL < 5.1.49 - Malformed 'BINLOG' Arguments Denial of Service                                                       | exploits/linux/dos/34521.txt
+Oracle MySQL < 5.1.50 - Privilege Escalation                                                                                 | exploits/multiple/remote/34796.txt
+Oracle MySQL for Microsoft Windows - Payload Execution (Metasploit)                                                          | exploits/windows/remote/16957.rb
+<SNIP>
 
 
 ==========================================================================================================
@@ -681,8 +796,6 @@ Requirements:
 
 > exploit/windows/mysql/mysql_payload
 > https://www.rapid7.com/db/modules/exploit/windows/mysql/mysql_payload
-
-
 
 
 07.4. DB Privesc - CVE-2012-2122 - Remote bypass authentication vulnerabilities
