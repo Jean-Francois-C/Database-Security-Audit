@@ -872,7 +872,7 @@ If the Web interface is enabled:
 
 Option 4
 ---------
-Use the tool 'nosql-exploitation-framework'
+Use the tools 'nosql-exploitation-framework' or 'NoSQLmap'
 
 
 2. Password hashes cracking using John The Ripper
@@ -906,6 +906,11 @@ Use the tool 'nosql-exploitation-framework'
 admin:admin:$scram$10000$/RvNLt7idKDYqnpgjrFDPA==$O0vYca487a4JwOFxsYC4xkWR+Ro=
 admin:test:$scram$10000$4lwAAO2i6neGV8OphKpDYQ==$NOp7p/jpShihGcemtrh38Xy8Vbs=
 testuser:testuser:$scram$10000$seF99VS0sZFe30VPBHA7A==$DYPbk/QJVowCNDPe2O2uWMmGq8U=
+
+
+4. Password hashes cracking using the tool 'NoSQLmap'
+------------------------------------------------------
+• NoSQLmap has a module 'passCrack' which allows to perform password hash cracking (dictionnary and brute-force)
 
 
 ==========================================================================================================
