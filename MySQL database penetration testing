@@ -80,7 +80,7 @@ Black-box penetration test (FROM unauthenticated attacker TO authenticated datab
 • Exploitation of an insecure authentication mechanism/configuration (if enabled i.e. anonymous acount, proxy users)
 • SQL injection in a Web application that allows to run unauthorized SQL queries to a MySQL database
 • You have compromised a server and you found clear-text MySQL database credentials hardcoded in scripts, configuration files, .bash_history files or application source code. 
-• Run an MySQL database remote exploit (0 day or missing patches e.g. cve2012-2122)
+• Run an MySQL database remote exploit (0 day or missing patches e.g. cve-2012-2122, cve-2016-6662)
 • Man-In-The-Middle attack to eavesdropped clear-text or hashed credentials (e.g. ARP cache poisoning)
 • …
 
