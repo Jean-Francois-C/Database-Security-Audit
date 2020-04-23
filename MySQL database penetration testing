@@ -86,16 +86,15 @@ Black-box penetration test (FROM unauthenticated attacker TO authenticated datab
 
 Grey-box penetration test (FROM (low privileged) database user TO privileged database user OR database administrator (DBA))
 ---------------------------------------------------------------------------------------------------------------------------
-• Identify and exploit privileges escalation vulnerabilities due to weak permissions and configuration settings:
+• Identify and exploit privilege escalation vulnerabilities due to weak permissions and configuration settings:
   > FILE privilege
   > PROCESS privilege
   > CREATE USER privilege
   > SUPER privilege
   > Proxy_user configuration
   > EXECUTE privilege on a insecure MySQL stored procedure with a DEFINER set to admin (or any privileged account)
-  > Missing patches
   > ...
- 
+• Identify and exploit privilege escalation vulnerabilities due to missing security patches (e.g. cve-2016-6662)
 
 ==========================================================================================================
 03. How to perform a network TCP ports scan to locate a MySQL Database
