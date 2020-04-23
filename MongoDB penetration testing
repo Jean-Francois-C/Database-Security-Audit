@@ -875,7 +875,7 @@ Option 4
 Use the tools 'nosql-exploitation-framework' or 'NoSQLmap'
 
 
-2. Password hashes cracking using John The Ripper
+2. Password hash cracking using John The Ripper
 --------------------------------------------------
 • Password dictionary attack
   pentester@LinuxVM > john --wordlist=dico.txt --rules --session=1 --format=MongoDB file_with_hashes.txt
@@ -886,7 +886,7 @@ Use the tools 'nosql-exploitation-framework' or 'NoSQLmap'
   pentester@LinuxVM > john --show file_with_hashes.txt
 
 
-3. Password hashes cracking using the tool 'krkr'
+3. Password hash cracking using the tool 'krkr'
 -------------------------------------------------
 => https://github.com/averagesecurityguy/krkr
 
@@ -908,7 +908,7 @@ admin:test:$scram$10000$4lwAAO2i6neGV8OphKpDYQ==$NOp7p/jpShihGcemtrh38Xy8Vbs=
 testuser:testuser:$scram$10000$seF99VS0sZFe30VPBHA7A==$DYPbk/QJVowCNDPe2O2uWMmGq8U=
 
 
-4. Password hashes cracking using the tool 'NoSQLmap'
+4. Password hash cracking using the tool 'NoSQLmap'
 ------------------------------------------------------
 • NoSQLmap has a module 'passCrack' which allows to perform password hash cracking (dictionnary and brute-force)
 
