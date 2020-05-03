@@ -7,11 +7,11 @@ Training course materials and research notes that I created to teach how to perf
 ### Content
 ```
 ➤ Reminder/General information (definitions)
-➤ Database Penetration Testing - List of attacks
+➤ Database Penetration Testing (black box, grey box) - List of attacks 
 ➤ How to perform a network ports scan to locate a database
 ➤ How to perform a brute-force attack to identify valid database credentials (logins & passwords)
 ➤ How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
-➤ How to log into a a database using valid credentials  
+➤ How to log into a database using valid credentials  
 ➤ How to identify and exploit database and OS privileges escalation vulnerabilities (including configuration review)
 ➤ How to dump and crack database password hashes
 ```
