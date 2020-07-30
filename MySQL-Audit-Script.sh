@@ -8,6 +8,8 @@
 
 mysqldump -u root -p -h localhost mysql user > MySQL_USER_table_dump.sql
 gzip MySQL_USER_table_dump.sql
+# tar -czvf MySQL_USER_table_dump.tar.gz ./MySQL_USER_table_dump.sql
 
+# If you want to copy/dump all databases
 # mysqldump --opt --user=root --password --all-databases > MySQL_all_databases_dump.sql
 # gzip MySQL_all_databases_dump.sql
