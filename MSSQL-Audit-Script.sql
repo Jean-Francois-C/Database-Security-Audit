@@ -456,7 +456,6 @@ go
 declare db_cursor cursor
 	for select name from master.dbo.sysdatabases
 	for read only
-
 go
 
 set nocount on
@@ -478,7 +477,6 @@ while @mycounter <= @myrowcount
 begin
 	fetch db_cursor into @mydbname
 
-
 	-- sp_helpuser : reports human-reading information about user access on database
 	select @queryname = "sp_helpuser"
 	print "echo set nocount on > %DIR_CMDS%\"+@queryname+"_"+@mydbname+".sql"
@@ -489,7 +487,6 @@ begin
 	select @temp = "sqlcmd -S%server% -E -s"";"" -w1000 -dmaster -i%DIR_CMDS%\"+@queryname+"_"+@mydbname+".sql"+" -o%DIR_RESULTS%\"+@queryname+"_"+@mydbname+".txt"
 	print @temp
 	
-
 	-- sp_helprotect : reports human-reading information about user permissions on objects
 	select @queryname = "sp_helprotect"
 	print "echo set nocount on > %DIR_CMDS%\"+@queryname+"_"+@mydbname+".sql"
@@ -534,7 +531,6 @@ begin
 	select @temp = "sqlcmd -S%server% -E -s"";"" -w1000 -dmaster -i%DIR_CMDS%\"+@queryname+"_"+@mydbname+".sql"+" -o%DIR_RESULTS%\"+@queryname+"_"+@mydbname+".txt"
 	print @temp
 
-
 	select @mycounter=@mycounter+1
 	continue
 end
@@ -546,7 +542,6 @@ deallocate db_cursor
 declare db_cursor cursor 
 	for select distinct traceid from :: fn_trace_getinfo(0)
 	for read only
-
 go
 
 set nocount on
