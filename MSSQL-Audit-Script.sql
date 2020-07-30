@@ -1,12 +1,13 @@
--- ------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- -------------------------------------------------------------------------------------------------------------------
 --  Basic MSSQL security assessment script
---  To run this SQL script you need to do the following 3 steps:
---  Step 1: Create a simple ".bat" file containing the following commands:
+--  To run this SQL script you need to do the following 4 steps:
+--  Step 1: Log into the Windows server hosting the MS SQL database
+--  Step 2: Create a simple ".bat" file containing the following commands:
 --          sqlcmd -s";" -w1000 -dmaster -iMSSQL-Audit-Script.sql -oresults.bat -Sserver-name\Instance-name
 --          results.bat
---  Step 2: Start a cmd console with a Windows account that has DBA privileges (i.e. runas /user:Domain\account cmd) on the Windows server hosting the database
---  Step 3. Run the ".bat" script 
--- ------------------------------------------------------------------------------------------------------------------------------------------------------------
+--  Step 3: Start a cmd console with a Windows account that has DBA privileges (i.e. runas /user:Domain\account cmd) 
+--  Step 4. Run the ".bat" script 
+-- -------------------------------------------------------------------------------------------------------------------
 
 print "@echo on"
 print "@echo off"
