@@ -4,7 +4,7 @@ REM Basic MSSQL security assessment script
 REM To run this script you need to do the following 3 steps:
 REM Step 1: Log into the Windows server hosting the MS SQL database
 REM Step 2: Start a PowerShell console with a Windows account that has DBA privileges (e.g. runas /noprofile /user:Domain\account powershell) 
-REM Step 3. Run this ".bat" script
+REM Step 3: Run this ".bat" script
 REM -------------------------------------------------------------------------------------------------------------------------------------------
 
 set /p server= Please type in the server name and instance name (such as : server-name\instance-name or just the server-name for the default instance):
