@@ -27,3 +27,12 @@ Training course materials and research notes that I created to teach how to perf
 ➤ Metasploit penetration testing framework (https://www.metasploit.com) 
 ➤ 'John the Ripper' - Password cracker (https://www.openwall.com/john/)
 ➤ Various scripts (source:kali/Github/your owns)
+```
+### Audit scripts
+Security audit scripts that collect useful information such as: the list of users and their privileges, the password hashes, the list of databases, the database version, the log DB settings, ...
+```
+➤ MSSQL-Audit-Script.bat
+➤ MySQL-Audit-Script.sh
+➤ Oracle-Audit-Script.sql
+➤ PostgreSQL-Audit-Script.sh
+```
