@@ -5,7 +5,6 @@
 # Step 1: Log into the Linux server hosting the PostgreSQL database with an admin account
 # Step 2: Run the command "su postgres"
 # Step 3: Run the script (e.g. located in /tmp/ and chmod 765)
-# Note: You can change the db name "template1"
 ######################################################################################################
  
 #Set the value of variable
