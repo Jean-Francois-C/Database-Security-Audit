@@ -1,4 +1,4 @@
-# Database security audit and penetration testing training
+## Database security audit and penetration testing training
 
 Training course materials and research notes that I created to teach how to perform a technical security assessment / penetration test of :  
 ➤ Relational databases: MS SQL, Oracle, MySQL and PostgreSQL.  
@@ -15,7 +15,7 @@ Training course materials and research notes that I created to teach how to perf
 ➤ How to identify and exploit database and OS privileges escalation vulnerabilities (including configuration review)
 ➤ How to dump and crack database password hashes
 ```
-### Useful tools
+### Useful tools (DB penetration testing)
 ```
 ➤ NMAP - Network port scanner and (NSE) scripts (https://nmap.org)
 ➤ Database command-line clients (i.e. sql*plus, sqlcmd, mysql, psql, mongo, redis-cli)
@@ -28,11 +28,11 @@ Training course materials and research notes that I created to teach how to perf
 ➤ 'John the Ripper' - Password cracker (https://www.openwall.com/john/)
 ➤ Various scripts (source:kali/Github/your owns)
 ```
-### Audit scripts
-Security audit scripts that collect useful information such as: the list of users and their privileges, the password hashes, the list of databases, the database version, the log DB settings, ...
+### Audit scripts (DB configuration review)
+Security audit scripts that collect the main database configuration settings such as the list of DB accounts and their roles/privileges, the password hashes, the database server version, the audit log settings, ...
 ```
 ➤ MSSQL-Audit-Script.bat
-➤ MySQL-Audit-Script.sh
 ➤ Oracle-Audit-Script.sql
 ➤ PostgreSQL-Audit-Script.sh
+➤ MySQL-Audit-Script.sh
 ```
