@@ -1,4 +1,4 @@
-/* Basic Oracle database security assessment script                      */
+/* Oracle database security assessment script                      */
 /* To run this SQL script you need to do the following 2 steps:          */
 /* Step 1: Log into the Oracle database using SQL*plus and a DBA account */
 /* Step 2: Run the command @/Oracle-Audit-Script.sql                     */
