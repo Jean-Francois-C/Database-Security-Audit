@@ -1,6 +1,6 @@
 #!/bin/bash
 ######################################################################################################
-# Basic PostgreSQL security assessment script
+# PostgreSQL security assessment script
 # To run this script you need to do the following 3 steps:
 # Step 1: Log into the Linux server hosting the PostgreSQL database with an admin account
 # Step 2: Run the command "su postgres"
