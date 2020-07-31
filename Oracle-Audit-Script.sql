@@ -26,8 +26,7 @@ select * from v$pwfile_users;
 spool off
 
 /*
- * patches1.out & patches2.out file
- * It provides the list of patch installed.
+ * patches1.out & patches2.out files - They provide the list of patches installed.
  */
 spool patches1.out
 SELECT * FROM PRODUCT_COMPONENT_VERSION;
@@ -41,8 +40,7 @@ spool off
 
 /*
  * For ORACLE >= 11g
- * dba_users1.out file
- * It provides information such as password, account status and default tablespace about all users of the database.
+ * dba_users1.out file - It provides information such as password, account status and default tablespace about all users of the database.
  */
 spool dba_users1.out
 select * from sys.user$ order by username;
@@ -50,16 +48,14 @@ spool off
 
 /*
  * For ORACLE =< 10g
- * dba_users2.out file
- * It provides information such as password, account status and default tablespace about all users of the database.
+ * dba_users2.out file - It provides information such as password, account status and default tablespace about all users of the database.
  */
 spool dba_users2.out
 select * from sys.dba_users order by username;
 spool off
 
 /*
- * dba_profiles.out file
- * It displays all profiles (including password policies).
+ * dba_profiles.out file - It displays all profiles (including password policies).
  */
 spool dba_profiles.out
 select * from sys.dba_profiles;
@@ -74,16 +70,14 @@ select * from sys.dba_priv_audit_opts;
 spool off
 
 /*
- * dba_stmt_audit_opts.out file
- * It describes current system auditing options.
+ * dba_stmt_audit_opts.out file - It describes current system auditing options.
  */
 spool dba_stmt_audit_opts.out
 select * from sys.dba_stmt_audit_opts;
 spool off
 
 /*
- * dba_obj_audit_opts.out file
- * It describes auditing options on all objects.
+ * dba_obj_audit_opts.out file - It describes auditing options on all objects.
  */
 spool dba_obj_audit_opts.out
 select * from sys.dba_obj_audit_opts;
@@ -101,16 +95,14 @@ select * from all_db_links;
 spool off
 
 /*
- * dba_db_links.out file
- * It describes all database links in the database. Its columns (except for PASSWORD) are the same as those in ALL_DB_LINKS.
+ * dba_db_links.out file - It describes all database links in the database. Its columns (except for PASSWORD) are the same as those in ALL_DB_LINKS.
  */
 spool dba_db_links.out
 select * from dba_db_links;
 spool off
 
 /*
- * dba_db_links_password.out file
- * It contains the output of the sys.link$ table. This table stored credential information in clear text used for the dblinks.
+ * dba_db_links_password.out file - It contains the output of the sys.link$ table. This table stored credential information in clear text used for the dblinks.
  */
 spool dba_db_links_password.out
 col link for a30
@@ -123,8 +115,7 @@ where  l.OWNER# = u.USER#;
 spool off
 
 /*
- * views_privileged.out file
- * It displays the views that have access granted other than select access.
+ * views_privileged.out file - It displays the views that have access granted other than select access.
  */
 spool views_privileged.out
 col grantee for a20
@@ -142,24 +133,21 @@ and privilege <>'SELECT';
 spool off
 
 /*
- * dba_table.out file
- * It lists all tables of the database (all users).
+ * dba_table.out file - It lists all tables of the database (all users).
  */
 spool dba_table.out
 select owner, tablespace_name, table_name from dba_tables;
 spool off
 
 /*
- * dba_tablespaces.out file
- * It describes all tablespaces in the database.
+ * dba_tablespaces.out file - It describes all tablespaces in the database.
  */
 spool dba_tablespaces.out
 select * from dba_tablespaces;
 spool off
 
 /*
- * dba_roles.out file
- * It lists all roles that exist in the database.
+ * dba_roles.out file - It lists all roles that exist in the database.
  */
 spool dba_roles.out
 select * from dba_roles;
@@ -174,16 +162,14 @@ select * from dba_role_privs;
 spool off
 
 /*
- * role_role_privs.out file
- * It describes the roles granted to roles in the database.
+ * role_role_privs.out file - It describes the roles granted to roles in the database.
  */
 spool role_role_privs.out
 select * from role_role_privs;
 spool off
 
 /*
- * dba_tab_privs.out file
- * It describes all object grants in the database.
+ * dba_tab_privs.out file - It describes all object grants in the database.
  */
 spool dba_tab_privs.out
 select * from dba_tab_privs;
@@ -206,40 +192,35 @@ select * from role_tab_privs;
 spool off
 
 /*
- * dba_col_privs.out file
- * It describes all column object grants in the database.
+ * dba_col_privs.out file - It describes all column object grants in the database.
  */
 spool dba_col_privs.out
 select * from dba_col_privs;
 spool off
 
 /*
- * audit.out file
- * It use information from V$PARAMETER to retrieve audit settings.
+ * audit.out file - It uses information from V$PARAMETER to retrieve audit settings.
  */
 spool audit.out
 select name,value from v$parameter where name like 'audit%';
 spool off
 
 /*
- * vparameter.out file
- * It displays information about the initialization parameters that are currently in effect for the session.
+ * vparameter.out file - It displays information about the initialization parameters that are currently in effect for the session.
  */
 spool vparameter.out
 select * from v$parameter;
 spool off
 
 /*
- * parameters.out file
- * It displays the current values for one or more initialization parameters.
+ * parameters.out file - It displays the current values for one or more initialization parameters.
  */
 spool parameters.out
 show parameters;
 spool off
 
 /*
- * schema.out file
- * Displays the data schema.
+ * schema.out file - It displays the data schema.
  */
 spool schema.out
 set pages 50000
