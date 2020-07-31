@@ -1,6 +1,6 @@
 #!/bin/sh
 #----------------------------------------------------------------------------------------------------------------------------------------
-# Basic script to dump the table "mysql.user" that contains the list of database users, password hashes, privileges...
+# Audit script to dump the table "mysql.user" that contains the list of database users with their password hashes and roles/privileges...
 # To run this script you need to do the following 2 steps:
 # Step 1: Log into the Linux server hosting the MySQL database
 # Step 2: Run the "MySQL-Audit-Script.sh" and type in the MySQL root's password when requested
