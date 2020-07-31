@@ -1,6 +1,6 @@
 @echo off
 REM -------------------------------------------------------------------------------------------------------------------------------------------
-REM Basic MSSQL security assessment script
+REM MSSQL security assessment script
 REM To run this script you need to do the following 3 steps:
 REM Step 1: Log into the Windows server hosting the MS SQL database
 REM Step 2: Start a PowerShell console with a Windows account that has DBA privileges (e.g. runas /noprofile /user:Domain\account powershell) 
