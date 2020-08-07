@@ -3,7 +3,7 @@
 # MySQL database security assessment script
 # To run this script you need to do the following 2 steps:
 # Step 1: Log into the Linux server hosting the MySQL database and copy the .sh script
-# Step 2: Run the "MySQL-Audit-Script.sh" and type in the MySQL root's password when requested
+# Step 2: Run the "MySQL-audit-script.sh" and type in the MySQL root's password when requested
 #---------------------------------------------------------------------------------------------------------------------------------------
    
 mysql -u root -p -h localhost mysql -e "
