@@ -136,9 +136,11 @@ NOTE (CVE-2019-9193): Third parties claim/state this is not an issue because Pos
 Try to read and write/modify interesting files such as configuration files, scripts, logs (e.g. '/home/<user>/.bash_history'), SSH keys (e.g. '/home/<user>/.ssh/authorized_keys') that will allow you to take over the Linux or Windows server hosting the PostgreSQL database. 
 
 • Execute OS command with a 'malicious' extension
-If you have superuser privileges on the PostgreSQL databases, you can run OS commands by creating a 'malicious' extension.
+In PostgreSQL 8.2 through 12.x, if you have superuser privileges on a PostgreSQL database you can run OS commands by loading a 'malicious' extension / custom library.
+Different techniques and tools exist:
 => https://github.com/cybertec-postgresql/pg_remote_exec  ('pg_remote_exec' is a PostgreSQL extension for "ssh-over-postgres")
 => https://github.com/Dionach/pgexec
+=> https://medium.com/@afinepl/postgresql-code-execution-udf-revisited-3b08412f47c1
 
 • PostgreSQL CREATE LANGUAGE Execution (if loading external scripting languages is enabled)
 Some installations of Postgres 8 and 9 are configured to allow loading external scripting languages. Most commonly this is Perl and Python. When enabled, command execution is possible on the host.
@@ -147,7 +149,7 @@ To execute system commands, loading the "untrusted" version of the language is n
 
 • Brute-force attack (default or easy guessable credentials).
 
-• Post-exploitation - Exploit DBlinks and postgres_fdw modules
+• Post-exploitation - Exploit DBlinks and 'postgres_fdw' module
 
 • Capture postgresql authentication credentials.
 => https://www.rapid7.com/db/modules/auxiliary/server/capture/postgresql
@@ -1019,7 +1021,8 @@ msf5 exploit(multi/postgres/postgres_createlang) > run
 07.5. DB/OS Privesc - PostgreSQL 8.2/8.3/8.4 - UDF for Command Execution (CVE-2007-3280)
 ========================================================================================================================
 On some default Linux installations of PostgreSQL, the postgres service account may write to the /tmp directory, and may source UDF Shared Libraries from there as well, allowing execution of arbitrary code. 
-This module compiles a Linux shared object file, uploads it to the target host via the UPDATE pg_largeobject method of binary injection, and creates a UDF (user defined function) from that shared object. Because the payload is run as the shared object's constructor, it does not need to conform to specific Postgres API versions.
+This module compiles a Linux shared object file, uploads it to the target host via the UPDATE pg_largeobject method of binary injection, and creates a UDF (user defined function) from that shared object. 
+Because the payload is run as the shared object's constructor, it does not need to conform to specific Postgres API versions.
 => http://www.leidecker.info/pgshell/Having_Fun_With_PostgreSQL.txt
 => https://www.rapid7.com/db/modules/exploit/linux/postgres/postgres_payload
 => https://www.rapid7.com/db/modules/exploit/windows/postgres/postgres_payload
@@ -1064,7 +1067,7 @@ pwd
 /var/lib/postgresql/8.3/main
 
 
-07.6. Post-exploitation - DBlinks and postgres_fdw module
+07.6. Post-exploitation - DBlinks and 'postgres_fdw' module
 ======================================================================================================
 1. DBLINKS
 ============
