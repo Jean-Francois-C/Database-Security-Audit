@@ -533,7 +533,9 @@ Manual checks:
   SQL> SELECT * from sysoledbusers;	  //Contains one row for each user and password mapping for the specified linked server
   SQL> SELECT HOST_NAME();		  //Display the Hostname and the IP address(es)
  
-  SQL> SELECT * from sp_helprolemember_<db name>  //Display the list of accounts which have the roles "db_owner", "db_datawriter" and "db_datareader" for the Db name.
+  SQL> use <db name>; exec sp_helprolemember; //Display the list of accounts which have the roles "db_owner", "db_datawriter" and "db_datareader" for the Db name.
+  SQL> use master; exec sp_helprolemember; 
+   
   SQL> SELECT user, password FROM master.dbo.sysxlogins
   SQL> SELECT name, password, LOGINPROPERTY(name, 'PasswordHash' ) hash FROM syslogins WHERE password IS NOT NULL; 
 
