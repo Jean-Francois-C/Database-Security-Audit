@@ -12,7 +12,7 @@ INDEX
 07. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
 08. How to connect to an Oracle Database using valid credentials
 09. How to identify and exploit database and OS privileges escalation vulnerabilities
-10. How to dump and crack Oracle password hashes (10g, 11g, 12c)
+10. How to dump and crack Oracle password hashes (10g, 11g, 12c and later versions)
 
 
 
@@ -510,30 +510,77 @@ On the GUI
 
 * Manual checks - Version and Patchs
 ------------------------------------
- SQL> SELECT * FROM V$VERSION;																	//Check the DB version
+ SQL> SELECT * FROM V$VERSION;									//Check the DB version
  SQL> SELECT action_time, action, namespace, version, comments FROM dba_registry_history;	//Check that the Oracle Patch Updates are installed
  
  
 * Manual checks - Passwords
 ---------------------------
  SQL> SELECT username,password,account_status FROM dba_users;		//Oracle 10g = List the accounts and their status (active etc.), display the passwords (hashs)
- SQL> SELECT * FROM sys.user$;						//Oracle 11g = List the accounts and their status (active etc.), display the passwords (hashs)
- SQL> select * from dba_users_with_defpwd;				//Oracle 11g = List the accounts which have a default passwords
- SQL> SELECT username,password_versions FROM dba_users;			//Oracle 11g = List the type of passwords stored "10g" (i.e. DES) and/or 11g (i.e. SHA-1)
- SQL> SELECT * FROM dba_profiles order by profile;			//Oracle 11g = Display the different profiles with their password policy
- SQL> SELECT username,profile,account_status FROM dba_users;		//Oracle 11g = List the accounts and their profile and status
+ SQL> SELECT * FROM sys.user$;						//Oracle 11g / 12c / 19c = List the accounts and their status (active etc.), display the passwords (hashs)
+ SQL> SELECT * from dba_users_with_defpwd ORDER BY username;		//Oracle 11g / 12c / 19c = List the accounts which have a default passwords
+ SQL> SELECT username,password_versions FROM dba_users;			//Oracle 11g / 12c / 19c = List the type of passwords stored "10g" (i.e. DES) and/or 11g (i.e. SHA-1)
+ SQL> SELECT * FROM dba_profiles order by profile;			//Oracle 11g / 12c / 19c = Display the different profiles with their password policy
+ SQL> SELECT username,profile,account_status FROM dba_users;		//Oracle 11g / 12c / 19c = List the accounts and their profile and status
  
  Clear-text passwords can be typically but not necessarily found at the following places:
  - Server: Shell History files, Linux/Unix Scripts, Log Files, Dump Files, Trace Files
  - Application Server: JDBC-Config-Files, Trace Files
  - DBA Client PC: Desktop-Shortcut, Batch-Files, Configuration files of Oracle Tools (like connections.ini), Trace Files
 
+ Different password policies can be set in an Oracle database for example for the DBA accounts, the service accounts and the user accounts. 
+ The password policies are set per profile and the password complexity can be enforced using a "password verification function". 
+ Oracle provides an example of a password verification function in the "$ORACLE_HOME/rdbms/admin/utlpwdmg.sql" file, but it is possible create a custom ones. 
+ 
+ For example the default Oracle database 12c's password verification function is dubbed "ORA12C_VERIFY_FUNCTION" and it contains the following settings:
+ - Password at least 8 characters
+ - at least 1 letters
+ - at least 1 digits
+ - must not contain database name
+ - must not contain user name or reverse user name
+ - must not contain oracle
+ - must not be too simple like welcome1
+ - password must differ by at least 3 characters from the old password
+ 
+ SQL> SELECT resource_name,limit from dba_profiles where profile='DEFAULT';
+
+	RESOURCE_NAME                         LIMIT
+	----------------------------          -----------------------
+	COMPOSITE_LIMIT                       UNLIMITED
+	SESSIONS_PER_USER                     UNLIMITED
+	CPU_PER_SESSION                       UNLIMITED
+	CPU_PER_CALL                          UNLIMITED
+	LOGICAL_READS_PER_SESSION             UNLIMITED
+	LOGICAL_READS_PER_CALL                UNLIMITED
+	IDLE_TIME                             UNLIMITED
+	CONNECT_TIME                          UNLIMITED
+	PRIVATE_SGA                           UNLIMITED
+	FAILED_LOGIN_ATTEMPTS                 10
+	PASSWORD_LIFE_TIME                    180
+	PASSWORD_REUSE_TIME                   UNLIMITED
+	PASSWORD_REUSE_MAX                    UNLIMITED
+	PASSWORD_VERIFY_FUNCTION              ORA12C_VERIFY_FUNCTION
+	PASSWORD_LOCK_TIME                    1
+	PASSWORD_GRACE_TIME                   7
+
+ The following SQL queries can be used to display the content of a specific password verify function (source code of stored proc):
+ SQL> set lines 300
+ SQL> set pages 1000
+ SQL> set long 1000000
+ SQL> select dbms_metadata.get_ddl('FUNCTION','PASSWORD_VERIFY_FUNCTION_NAME') from dual;
+ 
+ OR
+ SQL> select * from dba_source where owner = 'SYS' and name in (select limit from dba_profiles where resource_name = 'PASSWORD_VERIFY_FUNCTION_NAME' and limit <> 'NULL') order by name, line;
+
+ Useful blog post on how to create a robust password verify function for Oracle database 19c:
+ > https://pmdba.wordpress.com/2020/06/02/password-strength-revisited/
+ 
  
 * Manual checks - Audit trails
 -------------------------------
- SQL> show parameter audit;				//Check the Audit settings ("Audit_trail" should be set to "OS" or "DB" and "audit_sys_operations" should be set to "TRUE")     
- SQL> SELECT * FROM sys.dba_stmt_audit_opts;		//Check the current system privileges being audited across the system and by user
- SQL> SELECT * FROM sys.dba_obj_audit_opts;		//Check current system auditing options across the system and the user
+ SQL> show parameter audit;			//Check the Audit settings ("Audit_trail" should be set to "OS" or "DB" and "audit_sys_operations" should be set to "TRUE")     
+ SQL> SELECT * FROM sys.dba_stmt_audit_opts;	//Check the current system privileges being audited across the system and by user
+ SQL> SELECT * FROM sys.dba_obj_audit_opts;	//Check current system auditing options across the system and the user
  
  
 * Manual checks - General parameters
@@ -634,7 +681,7 @@ It is no longer the case in Oracle 12C.
 
 * Manual checks:
 ----------------
-	SQL> SELECT * FROM DBA_SYS_PRIVS WHERE privilege='CREATE ANY TABLE' OR privilege='SELECT ANY TABLE' OR privilege='UPDATE ANY 		TABLE' OR privilege='DROP ANY TABLE';
+	SQL> SELECT * FROM DBA_SYS_PRIVS WHERE privilege='CREATE ANY TABLE' OR privilege='SELECT ANY TABLE' OR privilege='UPDATE ANY TABLE' OR privilege='DROP ANY TABLE';
 	SQL> SELECT * FROM v$parameter WHERE name='O7_DICTIONARY_ACCESSIBILITY';
 
 * Manual attack in ORACLE 11g and earlier (e.g. dump password hashes): 
@@ -645,7 +692,7 @@ It is no longer the case in Oracle 12C.
 
 09.3. DB Privesc - Check for accounts with "SELECT ANY DICTIONARY" privilege (only for Oracle version =<11G)
 ============================================================================================================
-In Oracle 11g and earlier, users who have the 'select any dictionary' privilege can select all tables from the SYS schema including the table "sys.user$" which contains the password hashes. It is no longer the case in Oracle 12C.
+In Oracle 11g and earlier, users who have the 'select any dictionary' privilege can select all tables from the SYS schema including the table "sys.user$" which contains the password hashes. It is no longer the case in Oracle 12C and later versions.
 
 * Manual check:
 ---------------
@@ -1112,7 +1159,7 @@ pentester@LinuxVM > ./john –format:netlm /tmp/capture.txt
 
 
 ============================================================================================================================
-10. How to dump and crack Oracle password hashes (10g, 11g, 12c)
+10. How to dump and crack Oracle password hashes (10g, 11g, 12c and later versions)
 ============================================================================================================================
 
 1. Manual Password Hashs dump 
@@ -1171,25 +1218,6 @@ msf > use auxiliary/scanner/oracle/oracle_hashdump
 3. Oracle 11g/10g Password Hashs Cracking  
 =========================================
 
-JOHN the RIPPER - Jumbo Version (www.openwall.com)
---------------------------------------------------
-
-• Cracking Oracle 11G password hashs:
-  pentester@LinuxVM > cd /home/pentester/Documents/john-1.8.0-jumbo-1/run
-  pentester@LinuxVM > john --format=oracle11 password_dump_file.txt
-  pentester@LinuxVM > john --show password_dump_file.txt
-
-• Note: 
-  + format to give to John (if login=username and hash="S:FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704378EB24E7CB7D9C20716"):
-  username:FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704378EB24E7CB7D9C20716
-
-
-• Cracking 10g password hashs:
-  pentester@LinuxVM > cd /home/pentester/Documents/john-1.8.0-jumbo-1/run
-  pentester@LinuxVM > ./john --format=oracle password_dump_file.txt
-  pentester@LinuxVM > ./john --show password_dump_file.txt
-
-
 HASHCAT and OCL-HASHCAT - Https://hashcat.net
 ---------------------------------------------
 
@@ -1205,9 +1233,34 @@ HASHCAT and OCL-HASHCAT - Https://hashcat.net
   pentester@LinuxVM > ./oclHashcat-plus64.bin -m 110 --hex-salt FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704:378EB24E7CB7D9C20716 -a 3 ?l?l?l
 
 
-• Cracking Oracle 12C password Hashs (to check)
+• Cracking Oracle 12C password Hashs:
   hash type = 12300			
   T:9587674D5FAD2829B14DE5F463B0E57806F89B183DED5F1F2E60516525CEDCCE53AE2CAE0B0EE6CD746549BC8167C5853349B85639AA963B
   EFD7E6E911E796B8E24CEAF86D3F62CF5BBA31BAF8F954FB
 
   pentester@LinuxVM > ./hashcat-cli64.bin -m 12300 <HASH> -a 3 ?l?l?l
+
+
+SpiderLabs' script "pwd_decrypt_12c.py"
+---------------------------------------------
+• Cracking Oracle 12C password Hashs
+  > https://github.com/SpiderLabs/oracle_pwd_tools/blob/master/pwd_decrypt_12c.py
+  > https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/changes-in-oracle-database-12c-password-hashes/
+  
+  
+JOHN the RIPPER - Jumbo Version (www.openwall.com)
+--------------------------------------------------
+
+• Cracking Oracle 11G password hashs:
+  pentester@LinuxVM > cd /home/pentester/Documents/john-1.8.0-jumbo-1/run
+  pentester@LinuxVM > john --format=oracle11 password_dump_file.txt
+  pentester@LinuxVM > john --show password_dump_file.txt
+
+• Note: 
+  + format to give to John (if login=username and hash="S:FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704378EB24E7CB7D9C20716"):
+  username:FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704378EB24E7CB7D9C20716
+
+• Cracking 10g password hashs:
+  pentester@LinuxVM > cd /home/pentester/Documents/john-1.8.0-jumbo-1/run
+  pentester@LinuxVM > ./john --format=oracle password_dump_file.txt
+  pentester@LinuxVM > ./john --show password_dump_file.txt
