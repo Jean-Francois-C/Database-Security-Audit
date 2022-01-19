@@ -15,7 +15,6 @@ INDEX
 10. How to dump and crack Oracle password hashes (10g, 11g, 12c and later versions)
 
 
-
 =============================================================================================================================
 01. REMINDER (basic definitions) 
 =============================================================================================================================
@@ -131,8 +130,6 @@ Grey-box penetration test (FROM (low privileged) database user TO privileged dat
 ============================================================================================================================
 03. How to perform a network TCP ports scan to locate an Oracle Database DB (e.g. range: 1521-1560)
 ============================================================================================================================
-
-
 
 NMAP (https://nmap.org)
 --------------------------------------------------------------
@@ -1221,6 +1218,14 @@ msf > use auxiliary/scanner/oracle/oracle_hashdump
 HASHCAT and OCL-HASHCAT - Https://hashcat.net
 ---------------------------------------------
 
+• Cracking Oracle 12C password Hashs:
+  hash type = 12300			
+  T:9587674D5FAD2829B14DE5F463B0E57806F89B183DED5F1F2E60516525CEDCCE53AE2CAE0B0EE6CD746549BC8167C5853349B85639AA963B
+  EFD7E6E911E796B8E24CEAF86D3F62CF5BBA31BAF8F954FB
+
+  pentester@LinuxVM > ./hashcat-cli64.bin -m 12300 <HASH> -a 3 ?l?l?l
+
+
 • Cracking Oracle 11G password hashs:
   If 'S:FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704378EB24E7CB7D9C20716'
   Then this means:
@@ -1233,16 +1238,9 @@ HASHCAT and OCL-HASHCAT - Https://hashcat.net
   pentester@LinuxVM > ./oclHashcat-plus64.bin -m 110 --hex-salt FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704:378EB24E7CB7D9C20716 -a 3 ?l?l?l
 
 
-• Cracking Oracle 12C password Hashs:
-  hash type = 12300			
-  T:9587674D5FAD2829B14DE5F463B0E57806F89B183DED5F1F2E60516525CEDCCE53AE2CAE0B0EE6CD746549BC8167C5853349B85639AA963B
-  EFD7E6E911E796B8E24CEAF86D3F62CF5BBA31BAF8F954FB
-
-  pentester@LinuxVM > ./hashcat-cli64.bin -m 12300 <HASH> -a 3 ?l?l?l
-
-
 SpiderLabs' script "pwd_decrypt_12c.py"
----------------------------------------------
+---------------------------------------
+
 • Cracking Oracle 12C password Hashs
   > https://github.com/SpiderLabs/oracle_pwd_tools/blob/master/pwd_decrypt_12c.py
   > https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/changes-in-oracle-database-12c-password-hashes/
