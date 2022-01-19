@@ -12,8 +12,7 @@ INDEX
 07. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
 08. How to connect to an Oracle Database using valid credentials
 09. How to identify and exploit database and OS privileges escalation vulnerabilities
-10. How to dump and crack Oracle password hashes (10g, 11g, 12c and later versions)
-
+10. How to dump and crack Oracle password hashes (11g, 12c, ...)
 
 =============================================================================================================================
 01. REMINDER (basic definitions) 
@@ -76,7 +75,6 @@ In order to log into an Oracle database you need the following information:
 + 1 SID (Site ID, ORACLE_SID, INSTANCE_NAME) or 1 Service (SERVICE_NAME, DB_NAME)
 + 1 Login
 + 1 Password
-
 
 
 ============================================================================================================================
@@ -1154,9 +1152,8 @@ Step 3. Crack the SMB authentication challenge-response password hashes (NTLM).
 pentester@LinuxVM > ./john –format:netlm /tmp/capture.txt
 
 
-
 ============================================================================================================================
-10. How to dump and crack Oracle password hashes (10g, 11g, 12c and later versions)
+10. How to dump and crack Oracle password hashes (11g, 12c, ...)
 ============================================================================================================================
 
 1. Manual Password Hashs dump 
@@ -1212,8 +1209,8 @@ msf > use auxiliary/scanner/oracle/oracle_hashdump
       msf auxiliary(oracle_hashdump) > run
     
 
-3. Oracle 11g/10g Password Hashs Cracking  
-=========================================
+3. Oracle Password Hashs Cracking  
+========================================
 
 HASHCAT and OCL-HASHCAT - Https://hashcat.net
 ---------------------------------------------
