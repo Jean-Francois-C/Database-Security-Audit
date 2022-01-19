@@ -525,7 +525,7 @@ On the GUI
 
  Different password policies can be set in an Oracle database for example for the DBA accounts, the service accounts and the user accounts. 
  The password policies are set per profile and the password complexity can be enforced using a "password verification function". 
- Oracle provides an example of a password verification function in the "$ORACLE_HOME/rdbms/admin/utlpwdmg.sql" file, but it is possible create a custom ones. 
+ Oracle provides an example of a password verification function in the "$ORACLE_HOME/rdbms/admin/utlpwdmg.sql" file, but it is possible to create custom ones. 
  
  For example the default Oracle database 12c's password verification function is dubbed "ORA12C_VERIFY_FUNCTION" and it contains the following settings:
  - Password at least 8 characters
