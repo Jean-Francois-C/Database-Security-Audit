@@ -5,7 +5,7 @@ INDEX
 ============================================================================================================
 01. Reminder (definitions)
 02. SYBASE Database Penetration Testing - List of attacks
-03. How to perform a network ports scan to locate a SYABSE database
+03. How to perform a network port scan to locate a SYABSE database
 04. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
 05. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
 06. How to log into a SYBASE database using valid credentials
@@ -102,6 +102,8 @@ Defaults ports
 1. NMAP port scanner (basic example)
 --------------------------------------
 
+pentester@KaliLinux> nmap -Pn -sS -sV -vv -p 2638,5000,8282,8283 IP-address
+
 ┌──(kali㉿kali)-[~]
 └─$ sudo nmap -sS -sC -vv -Pn -p 1-65535 192.168.1.128           
 [sudo] password for kali: 
@@ -114,12 +116,10 @@ Scanning 192.168.1.128 [65535 ports]
 
 Reason: 65501 resets
 PORT      STATE SERVICE        REASON
-80/tcp    open  http           syn-ack ttl 128
 135/tcp   open  msrpc          syn-ack ttl 128
 139/tcp   open  netbios-ssn    syn-ack ttl 128
 443/tcp   open  https          syn-ack ttl 128
 445/tcp   open  microsoft-ds   syn-ack ttl 128
-593/tcp   open  http-rpc-epmap syn-ack ttl 128
 <SNIP>
 5000/tcp  open  upnp           syn-ack ttl 128
 <SNIP>
