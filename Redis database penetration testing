@@ -6,7 +6,7 @@ INDEX
 ==============================================================================================================
 01. General information
 02. REDIS database penetration testing - List of attacks
-03. How to perform a network TCP ports scan to locate a REDIS database
+03. How to perform a network TCP port scan to locate a REDIS database
 04. How to perform a password brute-force attack against a REDIS database
 05. How to log into a REDIS database using a valid password and extract/review its configuration
 06. How to identify and exploit database/OS privilege escalation vulnerabilities
@@ -81,7 +81,7 @@ Grey-box penetration test (You have the REDIS password and you want execute arbi
 
 
 ==============================================================================================================
-03. How to perform a network ports scan to locate a Redis Database
+03. How to perform a network port scan to locate a Redis Database
 ==============================================================================================================
 
 The default Redis is port is: 6379 (TCP)
