@@ -5,7 +5,7 @@ INDEX
 ============================================================================================================
 01. Reminder (definitions)
 02. MSSQL Database Penetration Testing - List of attacks
-03. How to perform a network ports scan to locate an MSSQL Database
+03. How to perform a network port scan to locate an MSSQL Database
 04. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
 05. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
 06. How to log into a MSSQL Database using valid credentials
@@ -133,7 +133,7 @@ Grey-box penetration test (FROM (low privileged) database user TO privileged dat
 
 
 ============================================================================================================
-03. How to perform a network ports scan to locate an MS SQL Database (e.g. TCP port: 1433 / UDP port: 1434)
+03. How to perform a network port scan to locate an MS SQL Database (e.g. TCP port: 1433 / UDP port: 1434)
 ============================================================================================================
 
 1. NMAP (https://nmap.org)
