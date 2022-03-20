@@ -5,7 +5,7 @@ INDEX
 =========================================================================================================
 01. Reminder (definitions)
 02. MySQL Database Penetration Testing - List of attacks
-03. How to perform a network TCP ports scan to locate an MySQL Database
+03. How to perform a network TCP port scan to locate an MySQL Database
 04. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
 05. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
 06. How to log into a MySQL Database using valid credentials
@@ -97,7 +97,7 @@ Grey-box penetration test (FROM (low privileged) database user TO privileged dat
 • Identify and exploit privilege escalation vulnerabilities due to missing security patches (e.g. cve-2016-6662)
 
 ==========================================================================================================
-03. How to perform a network TCP ports scan to locate a MySQL Database
+03. How to perform a network TCP port scan to locate a MySQL Database
 ==========================================================================================================
 
 pentester@KaliLinux> nmap -Pn -sS -sV -vv -p 3306 IP-address
