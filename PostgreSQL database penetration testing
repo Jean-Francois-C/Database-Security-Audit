@@ -5,7 +5,7 @@ INDEX
 ==============================================================================================================
 01. Reminder (definitions)
 02. PostgreSQL Database Penetration Testing - List of attacks
-03. How to perform a network TCP ports scan to locate an PostgreSQL Database
+03. How to perform a network TCP port scan to locate an PostgreSQL Database
 04. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
 05. How to check if a database is prone to known and unpatched vulnerabilities (e.g. obsolete database version, missing security patches)
 06. How to log into a PostgreSQL Database using valid credentials
@@ -156,7 +156,7 @@ To execute system commands, loading the "untrusted" version of the language is n
 
 
 ==============================================================================================================
-03. How to perform a network TCP ports scan to locate a PostgreSQL database
+03. How to perform a network TCP port scan to locate a PostgreSQL database
 ==============================================================================================================
 
 pentester@KaliLinux> nmap -Pn -sS -sV -vv -p 5432 IP-address
