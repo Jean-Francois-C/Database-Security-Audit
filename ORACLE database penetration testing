@@ -5,7 +5,7 @@ INDEX
 ============================================================================================================================
 01. Reminder (definitions)
 02. List of attacks (Oracle Database Penetration Testing)
-03. How to perform a network TCP ports scan to locate an Oracle Database DB (e.g. range: 1521-1560)
+03. How to perform a network TCP port scan to locate an Oracle Database DB (e.g. range: 1521-1560)
 04. How to perform a SID Brute-force attack to identify a valid SID
 05. How to perform a brute-force attack to identify valid database credentials (logins & passwords)
 06. How to identify valid credentials using a TNS Listener Poisoning Attack (MITM - CVE 2012-1675) 
@@ -126,7 +126,7 @@ Grey-box penetration test (FROM (low privileged) database user TO privileged dat
 
 
 ============================================================================================================================
-03. How to perform a network TCP ports scan to locate an Oracle Database DB (e.g. range: 1521-1560)
+03. How to perform a network TCP port scan to locate an Oracle Database DB (e.g. range: 1521-1560)
 ============================================================================================================================
 
 NMAP (https://nmap.org)
