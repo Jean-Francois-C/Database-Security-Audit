@@ -4,7 +4,7 @@
 INDEX
 ==========================================================================================================
 01. General information
-02. How to perform a network TCP ports scan to locate a MongoDB database
+02. How to perform a network TCP port scan to locate a MongoDB database
 03. How to perform a password brute-force attack to identify valid database credentials (logins/passwords)
 04. How to log into a MongoDB database using valid credentials and extract its configuration
 05. How to audit/test the security posture of a MongoDB (tools: mongoaudit, nosqlmap, nosql-exploitation-framework)
@@ -201,7 +201,7 @@ MongoDB authentication
 
 
 ==========================================================================================================
-02. How to perform a network ports scan to locate a MongoDB Database
+02. How to perform a network port scan to locate a MongoDB Database
 ==========================================================================================================
 
 1. NMAP (https://nmap.org)
