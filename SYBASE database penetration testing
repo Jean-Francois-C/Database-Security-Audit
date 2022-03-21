@@ -57,8 +57,12 @@ The public role is contained in every database, which includes system databases.
 Permissions granted to the public role are inherited by all other users and roles because they belong to the public role by default.
 Grant public only the permissions you want all users to have.
 
-• SYSADMIN PRIVILEGES
-The sysadmin fixed server role encompasses all other roles and has unlimited scope.
+• SYSTEM ADMINISTRATOR
+By default, the system administrator account (sa) in Sybase is assigned the following roles:
+  + sa_role
+  + sso_role
+  + oper_role
+  + sybase_ts_role
 
 • Several types of accounts can be used to login to a SYBASE database / SAP ASE depending of its configuration: 
   + local database user authentication
@@ -66,9 +70,9 @@ The sysadmin fixed server role encompasses all other roles and has unlimited sco
   + LDAP user authentication
   + PAM user authentication 
 
-• In order to log into a SYABSE database you need the following information:
+• In order to log into a SYBASE database you need the following information:
   + IP address
-  + Port (default port: 2638 or 5000)
+  + Port (default port: 5000)
   + Instance
   + Account's login and password
   
