@@ -73,7 +73,6 @@ By default, the system administrator account (sa) in Sybase is assigned the foll
 • In order to log into a SYBASE database you need the following information:
   + IP address
   + Port (default port: 5000)
-  + Instance
   + Account's login and password
   
 
@@ -99,8 +98,8 @@ Black-box penetration test (FROM unauthenticated attacker TO authenticated datab
 Defaults ports
 ---------------
 2638		tcp,udp		Sybase database / Sybase SQL Anywhere  (OLD)
-5000		tcp			  SAP Sybase ASE (Adaptive Server Enterprise)
-8282, 8283 	tcp 	SCC - SAP Control Center (https://IP:8283/scc/)
+5000		tcp		SAP Sybase ASE (Adaptive Server Enterprise)
+8282, 8283 	tcp 		SCC - SAP Control Center (https://IP:8283/scc/)
 
 
 1. NMAP port scanner (basic example)
@@ -200,14 +199,14 @@ TcpTestSucceeded       : False
 
 • List of "old" default credentials:
 
-Database	User ID			Password		Access
-===========================================
-Sybase		sa				  (none)			Admin
-Sybase		sa				  sasasa			Admin
-Sybase		probe			  (none)			Admin
-Sybase		mon_user		(none)			Admin
-Sybase		mon_user		mon_user		Admin
-Sybase		DBA				  SQL				  Admin
+Database	User ID		Password		Access
+=================================================================
+Sybase		sa		(none)			Admin
+Sybase		sa		sasasa			Admin
+Sybase		probe		(none)			Admin
+Sybase		mon_user	(none)			Admin
+Sybase		mon_user	mon_user		Admin
+Sybase		DBA		SQL			Admin
 Sybase		entldbreader	rdrpswd			Admin
 
 
@@ -287,16 +286,16 @@ SQL> select @@version
 ===================================================
 SQL> exec sp_configure
  
-Parameter Name						Default	Memory Used	Config Value		Run Value	Unit	Type
+Parameter Name			Default	Memory Used	Config Value		Run Value	Unit	Type
 ------------------------------------------------------------------------------------------------------------
-enable concurrent dump tran	          	0	          0	           0	           0	switch	dynamic
-enable functionality group	          	0	          0	           0	           0	switch	dynamic
+enable concurrent dump tran	        0	          0	           0	           0	switch	dynamic
+enable functionality group	        0	          0	           0	           0	switch	dynamic
 enable inline default sharing	        0	          0	           0	           0	switch	dynamic
-enable permissive unicode	          	0	          0	           0	           0	switch	dynamic
-enable plan sharing	          			0	          0	           0	           0	switch	dynamic
+enable permissive unicode	        0	          0	           0	           0	switch	dynamic
+enable plan sharing	          	0	          0	           0	           0	switch	dynamic
 quoted identifier enhancements	        0	          0	           0	           0	switch	static
-select for update	          			0	          0	           0	           0	switch	dynamic
-streamlined dynamic SQL	          		0	          0	           0	           0	switch	dynamic
+select for update	          	0	          0	           0	           0	switch	dynamic
+streamlined dynamic SQL	          	0	          0	           0	           0	switch	dynamic
 suppress js max task message	        0	          0	           0	           0	switch	dynamic
 
 
@@ -304,8 +303,8 @@ suppress js max task message	        0	          0	           0	           0	swi
 ===============================================================================================================
 SQL> exec master..sp_configure 'allow remote access'
 
-Parameter Name				Default	Memory Used		Config Value  Run 			Value	Unit			Type
--------------------------------------------------------------------------------------------------------------
+Parameter Name		Default	Memory Used		Config Value      Run 		Value	Unit		Type
+--------------------------------------------------------------------------------------------------------------------
 allow remote access           	          1	          0	           1	           1	switch          dynamic       
 
 
@@ -313,15 +312,15 @@ allow remote access           	          1	          0	           1	           1
 ====================================================
 SQL> exec sp_helpdb
 
-name				db_size		owner	dbid	created			durability	lobcomplvl	inrowlen	status
-------------------------------------------------------------------------------------------------------------
+name			db_size		owner	dbid		created		durability	lobcomplvl	inrowlen	status
+------------------------------------------------------------------------------------------------------------------------------------------
 master	      		26.0 MB		sa	    1		Mar 20, 2022	full	         0	    NULL		mixed log and data
 model	       		6.0 MB		sa	    3		Mar 20, 2022	full	         0	    NULL		mixed log and data
 pubs2	       		7.0 MB		sa	    4		Mar 20, 2022	full	         0	    NULL		trunc log on chkpt, mixed log and data
 pubs3	       		6.0 MB		sa	    5		Mar 20, 2022	full	         0	    NULL		trunc log on chkpt, mixed log and data
 sybsystemdb	      	12.0 MB		sa	31513		Mar 20, 2022	full	         0	    NULL		trunc log on chkpt, mixed log and data
-sybsystemprocs	    172.0 MB	sa	31514		Mar 20, 2022	full	         0	    NULL		trunc log on chkpt, mixed log and data
-tempdb	    	 	106.0 MB	sa	    2		Mar 20, 2022	no_recovery	     0	    NULL		select into/bulkcopy/pllsort, trunc log on chkpt, mixed log and data, allow wide dol rows
+sybsystemprocs	    172.0 MB		sa	31514		Mar 20, 2022	full	         0	    NULL		trunc log on chkpt, mixed log and data
+tempdb	    	 	106.0 MB	sa	    2		Mar 20, 2022	no_recovery	 0	    NULL		select into/bulkcopy/pllsort, trunc log on chkpt, mixed log and data, allow wide dol rows
 
 
 • List what other servers the tested Sybase server is able to execute 'Remote Procedure Calls' on
@@ -329,11 +328,11 @@ tempdb	    	 	106.0 MB	sa	    2		Mar 20, 2022	no_recovery	     0	    NULL		selec
 SQL> exec sp_helpserver
 
 name				network_name	security_mechanism	server_principal	class	status	id	cost
-----------------------------------------------------------------------------------------------------
-SRVWIN2K161			SRVWIN2K161		(null)				(null)				local		 0	   0
-SRVWIN2K161_XP		SRVWIN2K161_XP	(null)				(null)				RPCServer	no timeouts, no net password encryption, writable , enable login redirection	 3	1000
-SYB_BACKUP			SRVWIN2K161_BS	(null)				(null)				ASEnterprise	timeouts, no net password encryption, writable , enable login redirection	 1	NULL
-SYB_EJB				EJBServer		(null)				(null)				ASEJB	external engine auto start, enable login redirection	 2	NULL
+------------------------------------------------------------------------------------------------------------------------------------------
+SRVWIN2K161			SRVWIN2K161	(null)				(null)		local		 0	   0
+SRVWIN2K161_XP			SRVWIN2K161_XP	(null)				(null)		RPCServer	no timeouts, no net password encryption, writable , enable login redirection	 3	1000
+SYB_BACKUP			SRVWIN2K161_BS	(null)				(null)		ASEnterprise	timeouts, no net password encryption, writable , enable login redirection	 1	NULL
+SYB_EJB				EJBServer	(null)				(null)		ASEJB		external engine auto start, enable login redirection	 2	NULL
 
 
 • Enumerating groups on a db server and who is a member of which group
@@ -383,8 +382,8 @@ SQL> sp_displaylogin sa
 
 SQL> exec sp_configure "minimum password length"
 
-Parameter Name							Default		Memory Used		Config Value	Run Value		Unit		Type
-------------------------------------------------------------------------------------------------------------------------
+Parameter Name				Default		Memory Used		Config Value	Run Value		Unit        Type
+---------------------------------------------------------------------------------------------------------------------------------------------
 minimum password length       	          6	          	0	           6	           6			bytes       dynamic     
 
 
@@ -441,36 +440,36 @@ sa_serverprivs_role	(null)		1
 ======================================================
 SQL> exec sp_configure auditing
 
-Parameter Name	Default		Memory Used		Config Value	Run Value	Unit		Type
--------------------------------------------------------------------------------------------
+Parameter Name	  Default		Memory Used	Config Value	Run Value	Unit	     Type
+-----------------------------------------------------------------------------------------------------------------
 auditing         	0	          0	           0	           0		switch      dynamic             
 
 
 SQL> exec sp_configure 'log audit logon failure';
 
-Parameter Name							Default		Memory Used	Config Value	Run Value	Unit		Type
--------------------------------------------------------------------------------------------------------------
+Parameter Name			    Default		Memory Used	Config Value	   Run Value	Unit	    Type
+------------------------------------------------------------------------------------------------------------------------------
 log audit logon failure       	          0	          	0	           0	           0	switch      dynamic             
 
 
 Other - Useful commands
 =========================
 
-Task						Required role				Command or procedure		Database, group, or role
----------------------------------------------------------------------------------------------------------------
-Create login accounts  		System security officer		create login				Master database
+Task				Required role				Command or procedure		Database, group, or role
+-------------------------------------------------------------------------------------------------------------------------------------
+Create login accounts  		System security officer			create login			Master database
 
-Alter login accounts		System security officer		alter login					Master database
-							The exception is that 
-							users can change their 
-							own password and full name.
+Alter login accounts		System security officer			alter login			Master database
+				The exception is that 
+				users can change their 
+				own password and full name.
 
-Add users to database		Database owner or 			sp_adduser					User database
-and assign groups			System administrator
+Add users to database		Database owner or 			sp_adduser			User database
+and assign groups		System administrator
 
-Grant groups, users, 		Database owner, 			grant						User database
+Grant groups, users, 		Database owner, 			grant				User database
 or roles permission to		system administrator, 	
-create or access 			system security officer, 
+create or access 		system security officer, 
 database objects and		or object owner
 run commands
       
@@ -509,9 +508,9 @@ SQL> sp_configure 'xp_cmdshell', 0;
 or
 SQL> exec master..sp_configure 'xp_cmdshell', 0;
 
-	Parameter Name,			Default,	Memory Used,	Config Value,		Run Value,	Unit,			Type
-	---------------------------------------------------------------------------------------------------------
-	'xp_cmdshell context',		'1',			'0',			'0',			'0',	'switch',		'dynamic'
+	Parameter Name,		     Default,	 	Memory Used,		Config Value,		Run Value,	Unit,		Type
+	------------------------------------------------------------------------------------------------------------------------------------------
+	'xp_cmdshell context',		'1',			'0',			'0',		      '0',	'switch',	'dynamic'
 
 
 SQL> exec master..xp_cmdshell 'whoami';  	
@@ -543,9 +542,10 @@ SQL> select * from master..syslogins
 OR
 SQL> select name, password from master..syslogins
 
-	name,		password
-	'sa',		0xc0073c08e7a27a3991f0e19f0dd97671db12e84feb4cc142852918c2c6e687de439a267731bad3e87510
-	'probe',	0xc007497a105831763d2f6f84ce75a257a3a47d2f9fef58d26f09c75c8096aaec658fcfb88e0d180829f0
+	name,	password
+	----------------------------------------------------------------------------------------------
+	'sa',	0xc0073c08e7a27a3991f0e19f0dd97671db12e84feb4cc142852918c2c6e687de439a267731bad3e87510
+	'probe',0xc007497a105831763d2f6f84ce75a257a3a47d2f9fef58d26f09c75c8096aaec658fcfb88e0d180829f0
 	<snip>
 
 
