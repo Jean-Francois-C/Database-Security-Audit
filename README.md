@@ -18,7 +18,7 @@ Training course materials and research notes that I created to teach how to perf
 ### Useful tools (DB penetration testing)
 ```
 ➤ NMAP - Network port scanner and (NSE) scripts (https://nmap.org)
-➤ Database command-line clients (i.e. sql*plus, sqlcmd, mysql, psql, mongo, redis-cli)
+➤ Database command-line clients (i.e. sql*plus, sqlcmd, mysql, psql, mongo, redis-cli, isql)
 ➤ Database GUI clients (e.g. DBvis (https://dbvis.com), Toad (https://www.quest.com/toad/))
 ➤ ODAT - Oracle Database Attacking Tool (https://github.com/quentinhardy/odat) 
 ➤ PowerUPsql - PowerShell Toolkit for Attacking SQL Server (https://github.com/NetSPI/PowerUpSQL)
