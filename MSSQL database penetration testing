@@ -590,7 +590,7 @@ List of sensitive privileges/roles that should be granted only to a limited list
 • ALTER APPLICATION ROLE 		-- Change the name, password, or default schema of an application role.
 • ALTER SERVER role			-- Changes the membership of a server role or changes name of a user-defined server role.
 • ALTER ROLE 				-- Add members to a database role or changes the name of a user-defined database role.
-• ALTER ANY SERVER ROLE permission
+• ALTER ANY SERVER ROLE permission      -- Add members to any user-defined server role.
 • ALTER LOGIN permission		-- Change the properties of a SQL Server login account (including changing its password)
 • ALTER User				-- Rename a database user or changes its default schema (including changing its password if you knew the current one)
 • ALTER ANY LOGIN permission		-- Allow to change the password of any SQL database user without knowing its current password
