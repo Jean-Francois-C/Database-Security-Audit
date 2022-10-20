@@ -596,7 +596,7 @@ On the GUI
 
  Extensive procedure granted to "PUBLIC"
  SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = 'UTL_HTTP' AND grantee = 'PUBLIC';
- SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = ' ' AND grantee = 'PUBLIC';
+ SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = 'UTL_FILE' AND grantee = 'PUBLIC';
  SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = 'UTL_SMTP' AND grantee = 'PUBLIC';
  SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = 'UTL_TCP' AND grantee = 'PUBLIC';
  SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = 'DBMS_JOB' AND grantee = 'PUBLIC';
