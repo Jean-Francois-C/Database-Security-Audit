@@ -1230,9 +1230,9 @@ HASHCAT and OCL-HASHCAT - Https://hashcat.net
   SALT = '378EB24E7CB7D9C20716'
 
   pentester@LinuxVM > echo FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704:378EB24E7CB7D9C20716 >test
-  pentester@LinuxVM > ./hashcat-cli64.bin -m 110 --hex-salt test -a 3 ?l?l?l
+  pentester@LinuxVM > ./hashcat-cli64.bin -m 112 --hex-salt test -a 3 ?l?l?l
 
-  pentester@LinuxVM > ./oclHashcat-plus64.bin -m 110 --hex-salt FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704:378EB24E7CB7D9C20716 -a 3 ?l?l?l
+  pentester@LinuxVM > ./oclHashcat-plus64.bin -m 112 --hex-salt FDBB56DB00B2E3F1B2D2F9BFC4BFF2B5DF0B8704:378EB24E7CB7D9C20716 -a 3 ?l?l?l
 
 
 SpiderLabs' script "pwd_decrypt_12c.py"
