@@ -451,7 +451,6 @@ Shellcodes: No Result
 • https://docs.microsoft.com/en-us/sql/ssms/download-sql-server-management-studio-ssms
 
 
-
 3. DbVisualizer (GUI multi-database client - https://dbvis.com)
 -----------------------------------------------------------------
 pentester@LinuxVM > sudo find / -name dbvis
@@ -473,9 +472,25 @@ root@LinuxVM > ./dbvis
   > "Connect"
 
 
-4. NMAP - 'ms-sql-query' module
+4. PowerUPsql (https://github.com/NetSPI/PowerUpSQL)
+--------------------------------------------------------------
+• PowerUpSQL includes functions that support SQL Server discovery, weak configuration auditing, privilege escalation on scale, and post exploitation actions such as OS command execution.
+
+C:\> runas /noprofile /netonly /user:domain\user PowerShell.exe -nop -exec bypass
+PS C:\>: cd /Users/Pen003/Documents/Tools/PowerUPsql-master/
+PS C:\>: Import-Module .\PowerUpSQL.psd1	
+
+=> Get a list of domain SQL servers that can be logged into with a provided SQL Server login
+$Targets = Get-SQLInstanceDomain -Verbose | Get-SQLConnectionTestThreaded -Verbose -Threads 10 -username testuser -password testpass | Where-Object {$_.Status -like "Accessible"}
+$Targets
+
+=> Then execute SQL queries 
+$Targets | Get-SQLQuery -Verbose -Query "Select @@version"
+
+
+5. NMAP - 'ms-sql-query' module
 ---------------------------------------
-• This module allows to run queries against a Microsoft SQL Server (ms-sql).
+• This NMAP module allows to run queries against a Microsoft SQL Server (ms-sql).
 
   pentester@LinuxVM > nmap -p 1433 --script ms-sql-query --script-args mssql.username=sa,mssql.password=Test1234,ms-sql-query.query="SELECT * FROM master..syslogins" 192.168.1.41
 
@@ -497,7 +512,7 @@ root@LinuxVM > ./dbvis
 
 
 
-5. MSSQLCLIENT.py - Impacket offensive python framework
+6. MSSQLCLIENT.py - Impacket offensive python framework
 ---------------------------------------------------------
 
 Impacket - Copyright 2020 SecureAuth Corporation
