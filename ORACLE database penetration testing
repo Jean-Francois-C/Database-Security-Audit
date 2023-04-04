@@ -107,7 +107,6 @@ Grey-box penetration test (FROM (low privileged) database user TO privileged dat
 	+ ANALYZE ANY + CREATE PROCEDURE
 	+ CREATE ANY INDEX + CREATE PROCEDURE
 
-
 • Identify and exploit privileges escalation vulnerabilities that will allow you to get unauthorized access to sensitive data belonging to other users/schemas. 
   For example a regular db user with the following privilege(s) can escalate its privileges and access to other users’ data:
 	+ BECOME USER privilege
