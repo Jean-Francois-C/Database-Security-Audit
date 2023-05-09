@@ -162,8 +162,7 @@ To execute system commands, loading the "untrusted" version of the language is n
 pentester@KaliLinux> nmap -Pn -sS -sV -vv -p 5432 IP-address
 pentester@KaliLinux> nmap -v -Pn -sS -sV -p- 192.168.75.149 
 
-Examples:
-
+Example:
 	Nmap scan report for 192.168.1.104
 	Host is up (0.00044s latency).
 
@@ -421,7 +420,6 @@ LINUX
 
 
 WINDOWS
-
    • To add
 
 
@@ -453,7 +451,6 @@ This module allows for simple SQL statements to be executed against a PostgreSQL
 
 > auxiliary/admin/postgres/postgres_sql
 > https://www.rapid7.com/db/modules/auxiliary/admin/postgres/postgres_sql
-
 
 Examples:
 
@@ -523,7 +520,7 @@ Some interesting flags (to see all, use -h or --help depending on your psql vers
    • -E: will describe the underlaying queries of the \ commands (cool for learning!)
    • -l: psql will list all databases and then exit (useful if the user you connect with doesn't has a default database, like at AWS RDS)
 
-Most \d commands support additional param of __schema__.name__ and accept wildcards like *.*
+Most "\d" commands support additional param of __schema__.name__ and accept wildcards like *.*
    • \q: Quit/Exit
    • \c __database__		Connect to a database
    • \d __table__		Show table definition including triggers
@@ -560,15 +557,17 @@ To display the privileges of a specific suer
 ----------------------------------------------
    • SELECT table_catalog, table_schema, table_name, privilege_type FROM information_schema.table_privileges WHERE grantee = 'example_user';
 
-
 Useful SQL queries
 -------------------
-   • SELECT VERSION();							Display the database version
-   • \connect db_name							Change current database
-   • SELECT * FROM pg_shadow;						Extract the password hashes
-   • pg_dump -Fc dbname > filename					Back up a database (database backups are compressed by default)
-   • pg_restore -d dbname filename					Restore from backup
-   • GRANT pg_read_server_files TO test_user;				Grant privileges to a user
+   • SELECT * FROM pg_user;			Display the privileges of each user
+   • SELECT * FROM pg_roles;			Display the database roles of each user
+   • SELECT VERSION();				Display the database version
+   • \connect db_name				Change current database
+   • SELECT * FROM pg_shadow;			Extract the password hashes
+   • pg_dump -Fc dbname > filename		Back up a database (database backups are compressed by default)
+   • pg_restore -d dbname filename		Restore from backup
+   • GRANT pg_read_server_files TO test_user;	Grant privileges to a user
+   • SELECT * FROM pg_shadow;    		Dump the database password hashes
 
 
 Default Roles
@@ -1075,7 +1074,8 @@ pwd
 => https://www.postgresql.org/docs/12/contrib-dblink-get-connections.html
 => http://www.postgresonline.com/journal/archives/44-Using-DbLink-to-access-other-PostgreSQL-Databases-and-Servers.html
 
-> DBlinks allow to execute SQL queries to a remote database from the PostgreSQL database we are logged into. It can be used to 'attack' other databases on the network for example after compromising 1 database through a SQL injection vulnerability.
+> DBlinks allow to execute SQL queries to a remote database from the PostgreSQL database we are logged into. 
+  It can be used to 'attack' other databases on the network for example after compromising 1 database through a SQL injection vulnerability.
 
 > DBlinks can be used in a VIEW to query data from a remote database. In that context, if an authenticated attacker can display the View's query then he will see the clear-text login and password defined in the DBlinks command and thus will be able to compromise an other database.
 
@@ -1201,7 +1201,7 @@ It captures challenge and response pairs that can be supplied to Cain or JtR for
 
 1. Log into the Database with an account who has 'superuser' privileges
 	
-2. Dump the hashs
+2. Dump the password hashes
 	SQL> SELECT * FROM pg_shadow; 
 
 3. Crack the password hashes using John the ripper
