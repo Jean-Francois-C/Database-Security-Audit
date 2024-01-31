@@ -36,3 +36,31 @@ Security audit scripts that collect the main database configuration settings suc
 ➤ PostgreSQL-Audit-Script.sh
 ➤ MySQL-Audit-Script.sh
 ```
+### Useful resources (DB security)
+```
+➤ CIS Benchmark - Secure configuration guidelines 
+  - MongoDB database 
+    ➤ https://www.cisecurity.org/benchmark/mongodb
+  - MySQL database 
+    ➤ https://www.cisecurity.org/benchmark/oracle_mysql
+  - Oracle database 
+    ➤ https://www.cisecurity.org/benchmark/oracle_database
+  - PostgreSQL database 
+    ➤ https://www.cisecurity.org/benchmark/postgresql
+  - MSSQL Server database
+    ➤ https://www.cisecurity.org/benchmark/microsoft_sql_server
+
+➤ Microsoft SQL server database security guides
+  - SQL Server security best practices
+    ➤ https://learn.microsoft.com/en-us/sql/relational-databases/security/sql-server-security-best-practices?view=sql-server-ver16
+  - Securing SQL Server
+    ➤ https://learn.microsoft.com/en-us/sql/relational-databases/security/securing-sql-server?view=sql-server-ver16
+
+➤ Oracle® database security guides
+  - https://docs.oracle.com/en//database/oracle/oracle-database/23/dbseg/database-security-guide.pdf
+  - https://www.oracle.com/security/database-security/
+
+➤ MySQL Secure Deployment Guide
+  - https://downloads.mysql.com/docs/mysql-secure-deployment-guide-8.0-en.pdf
+  - https://dev.mysql.com/doc/refman/8.3/en/security-guidelines.html
+```
