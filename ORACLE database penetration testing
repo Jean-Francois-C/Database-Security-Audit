@@ -103,7 +103,7 @@ Grey-box penetration test (FROM (low privileged) database user TO privileged dat
 • Identify and exploit privileges escalation vulnerabilities that will allow you to become directly database administrator (DBA). 
   For example a regular db user with the following combinations of database system privileges may very often become DBA:
 	+ CREATE PROCEDURE + EXECUTE ANY PROCEDURE
-	+ CREATE ANY TRIGER + CREATE PROCEDURE
+	+ CREATE ANY TRIGGER + CREATE PROCEDURE
 	+ ANALYZE ANY + CREATE PROCEDURE
 	+ CREATE ANY INDEX + CREATE PROCEDURE
 
@@ -798,17 +798,17 @@ A user with the privilege "ALTER USER" can change the password of any user (incl
 	SQL> ...
 
 
-09.6. DB & OS Privesc - Check for accounts with "CREATE/EXECUTE/UPDATE ANY PROCEDURE", "CREATE ANY TRIGER/INDEX", "ANALYZE ANY" privileges
-==========================================================================================================================================
+09.6. DB & OS Privesc - Check for accounts with "CREATE/EXECUTE/UPDATE ANY PROCEDURE", "CREATE ANY TRIGGER/INDEX", "ANALYZE ANY" privileges
+===========================================================================================================================================
 With the following combinations of database system privileges, an Oracle user may often become DBA and execute OS commands:
 	+ CREATE PROCEDURE + EXECUTE ANY PROCEDURE
-	+ CREATE ANY TRIGER + CREATE PROCEDURE
+	+ CREATE ANY TRIGGER + CREATE PROCEDURE
 	+ ANALYZE ANY + CREATE PROCEDURE
 	+ CREATE ANY INDEX + CREATE PROCEDURE
 
 * Manual checks:
 ----------------
-SQL> SELECT * FROM DBA_SYS_PRIVS WHERE privilege='CREATE ANY PROCEDURE' OR privilege='EXECUTE ANY PROCEDURE' OR privilege='UPDATE ANY PROCEDURE' OR privilege='DROP ANY PROCEDURE' OR privilege='CREATE ANY TRIGER' OR privilege='CREATE ANY INDEX' OR privilege='ANALYZE ANY';
+SQL> SELECT * FROM DBA_SYS_PRIVS WHERE privilege='CREATE ANY PROCEDURE' OR privilege='EXECUTE ANY PROCEDURE' OR privilege='UPDATE ANY PROCEDURE' OR privilege='DROP ANY PROCEDURE' OR privilege='CREATE ANY TRIGGER' OR privilege='CREATE ANY INDEX' OR privilege='ANALYZE ANY';
 or
 SQL> SELECT privilege FROM user_sys_privs UNION ALL SELECT granted_role FROM user_role_privs ORDER BY 1;
 
@@ -841,7 +841,7 @@ SQL> SELECT privilege FROM user_sys_privs UNION ALL SELECT granted_role FROM use
 	SQL> INSERT INTO system.ol$ (category) VALUES ('BLABLA');
 	SQL> SELECT granted_role FROM user_role_privs ORDER BY 1;
 
-* Manual attack (CREATE ANY TRIGER + CREATE PROCEDURE):	
+* Manual attack (CREATE ANY TRIGGER + CREATE PROCEDURE):	
 ------------------------------------------------------
         pentester@LinuxVM > sqlplus64 /nolog
 	SQL> CONNECT your_account/password@192.168.1.10/ORCL;
